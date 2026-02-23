@@ -9,8 +9,8 @@ app.use(express.urlencoded({ extended: true }));
 
 // 🛡️ TU ESCUADRÓN DE OBREROS (Actualiza estas URLs cuando Railway te las dé)
 const OBREROS = [
-    { id: 1, url: 'obrero-1-production.up.railway.app', carga: 0, fallos: 0, activo: true },
-    { id: 2, url: 'obrero-2-production.up.railway.app', carga: 0, fallos: 0, activo: true }
+    { id: 1, url: 'https://obrero-1-production.up.railway.app', carga: 0, fallos: 0, activo: true },
+    { id: 2, url: 'https://obrero-2-production.up.railway.app', carga: 0, fallos: 0, activo: true }
 ];
 
 // 📊 RADAR DE MONITOREO (Entra a /status desde tu navegador para ver esto)
