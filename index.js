@@ -10,7 +10,12 @@ app.use(express.urlencoded({ extended: true }));
 // 🛡️ TU ESCUADRÓN DE OBREROS (Asegúrate de que las URLs sean las correctas)
 const OBREROS = [
     { id: 1, url: 'https://obrero-1-production.up.railway.app', carga: 0, fallos: 0, activo: true },
-    { id: 2, url: 'https://obrero-2-production.up.railway.app', carga: 0, fallos: 0, activo: true }
+    { id: 2, url: 'https://obrero-2-production.up.railway.app', carga: 0, fallos: 0, activo: true },
+    { id: 2, url: 'https://obrero-3-1-production.up.railway.app', carga: 0, fallos: 0, activo: true },
+    { id: 2, url: 'https://obrero-4-2-production.up.railway.app', carga: 0, fallos: 0, activo: true },
+    { id: 2, url: 'https://obrero-5-3-production.up.railway.app', carga: 0, fallos: 0, activo: true },
+    { id: 2, url: 'https://obrero-6-4-production.up.railway.app', carga: 0, fallos: 0, activo: true },
+    { id: 2, url: 'https://obrero-7-5-production.up.railway.app', carga: 0, fallos: 0, activo: true }
 ];
 
 // 📊 RADAR DE MONITOREO
