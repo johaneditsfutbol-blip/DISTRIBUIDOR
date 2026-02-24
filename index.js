@@ -7,7 +7,7 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// 🛡️ TU ESCUADRÓN DE OBREROS (Asegúrate de que las URLs sean las correctas)
+// 🛡️ ESCUADRÓN DE OBREROS
 const OBREROS = [
     { id: 1, url: 'https://obrero-1-production.up.railway.app', carga: 0, fallos: 0, activo: true },
     { id: 2, url: 'https://obrero-2-production.up.railway.app', carga: 0, fallos: 0, activo: true },
@@ -18,7 +18,7 @@ const OBREROS = [
     { id: 7, url: 'https://obrero-7-5-production.up.railway.app', carga: 0, fallos: 0, activo: true }
 ];
 
-// 📊 RADAR DE MONITOREO
+// RADAR DE MONITOREO
 app.get('/status', (req, res) => {
     let html = `<h1 style="font-family: sans-serif;">📡 Torre de Control - Estado del Escuadrón</h1><table border="1" cellpadding="10" style="font-family: monospace; text-align: left; border-collapse: collapse;">`;
     html += `<tr style="background: #eee;"><th>ID</th><th>Estado</th><th>Carga Actual</th><th>Fallos Consecutivos</th><th>URL</th></tr>`;
@@ -30,7 +30,7 @@ app.get('/status', (req, res) => {
     res.send(html);
 });
 
-// 🧠 EL CEREBRO: Intercepta todas las rutas
+// EL CEREBRO: Intercepta todas las rutas
 app.all('*', async (req, res) => {
     if (req.originalUrl === '/favicon.ico') return res.status(204).end();
 
@@ -39,7 +39,10 @@ app.all('*', async (req, res) => {
     let errorFinal = null;
     const inicioReloj = Date.now();
 
-    // 🕵️ LOG DE ENTRADA (Lo que viene de la App)
+    // NUEVO CAMBIO 1: La lista negra temporal para esta petición
+    let obrerosDescartados = []; 
+
+    // LOG DE ENTRADA
     console.log(`\n--- 📥 NUEVA SOLICITUD ---`);
     console.log(`Método: ${req.method} | Ruta: ${req.originalUrl}`);
     if (req.method !== 'GET' && Object.keys(req.body).length > 0) {
@@ -47,19 +50,22 @@ app.all('*', async (req, res) => {
     }
 
     while (intentos < 3 && !exito) {
-        const obrerosActivos = OBREROS.filter(o => o.activo);
+        // NUEVO CAMBIO 2: Filtramos activos Y que no hayan fallado en esta misma petición
+        const obrerosDisponibles = OBREROS.filter(o => o.activo && !obrerosDescartados.includes(o.id));
         
-        if (obrerosActivos.length === 0) {
-            console.error(`[🔥] ERROR CRÍTICO: No hay obreros disponibles.`);
-            return res.status(503).json({ success: false, message: "CRÍTICO: Todos los obreros están caídos." });
+        if (obrerosDisponibles.length === 0) {
+            console.error(`[🔥] ERROR CRÍTICO: No hay obreros disponibles o todos fallaron.`);
+            return res.status(503).json({ success: false, message: "CRÍTICO: Todos los obreros están caídos o fallaron esta petición." });
         }
 
-        // Elegir al que tenga MENOR CARGA
-        const obreroElegido = obrerosActivos.reduce((prev, curr) => (prev.carga < curr.carga ? prev : curr));
+        // NUEVO CAMBIO 3: La Ruleta Rusa para desempatar (Cura de la obsesión)
+        const menorCarga = Math.min(...obrerosDisponibles.map(o => o.carga));
+        const empatados = obrerosDisponibles.filter(o => o.carga === menorCarga);
+        const obreroElegido = empatados[Math.floor(Math.random() * empatados.length)];
 
         try {
             obreroElegido.carga++;
-            console.log(`[>>] REDIRECCIONANDO -> Obrero ${obreroElegido.id} (Carga actual: ${obreroElegido.carga})`);
+            console.log(`[>>] REDIRECCIONANDO -> Obrero ${obreroElegido.id} (Carga actual: ${obreroElegido.carga} | Intento ${intentos + 1}/3)`);
 
             const respuesta = await axios({
                 method: req.method,
@@ -69,7 +75,7 @@ app.all('*', async (req, res) => {
                 timeout: 120000 
             });
 
-            // 🕵️ LOG DE SALIDA (Lo que devuelve el Obrero)
+            // LOG DE SALIDA
             const duracion = Date.now() - inicioReloj;
             const dataString = JSON.stringify(respuesta.data);
             const preview = dataString.length > 250 ? dataString.substring(0, 250) + "... [Truncado]" : dataString;
@@ -87,6 +93,9 @@ app.all('*', async (req, res) => {
             intentos++;
             obreroElegido.fallos++;
             
+            // NUEVO CAMBIO 4: El Castigo (Se va a la lista negra temporal)
+            obrerosDescartados.push(obreroElegido.id);
+
             const errorDetalle = error.response ? JSON.stringify(error.response.data) : error.message;
             console.error(`[❌] FALLO Obrero ${obreroElegido.id} (Intento ${intentos}/3)`);
             console.error(`     Error: ${errorDetalle}`);
