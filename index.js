@@ -30,6 +30,21 @@ app.get('/status', (req, res) => {
     res.send(html);
 });
 
+// --- HELPER PARA LOGS ELEGANTES ---
+const formatoLog = (titulo, objeto) => {
+    try {
+        const str = JSON.stringify(objeto, null, 2);
+        // Si es muy largo, no lo truncamos a lo bestia, mostramos las llaves principales
+        if (str.length > 500) {
+            return `\n    └─ ${titulo}: { ... [Objeto Grande] Claves: ${Object.keys(objeto).join(', ')} ... }`;
+        }
+        // Formato limpio con tabulaciones
+        return `\n    └─ ${titulo}:\n${str.split('\n').map(l => `        ${l}`).join('\n')}`;
+    } catch (e) {
+        return `\n    └─ ${titulo}: [No se pudo parsear el objeto]`;
+    }
+};
+
 // EL CEREBRO: Intercepta todas las rutas
 app.all('*', async (req, res) => {
     if (req.originalUrl === '/favicon.ico') return res.status(204).end();
@@ -39,33 +54,42 @@ app.all('*', async (req, res) => {
     let errorFinal = null;
     const inicioReloj = Date.now();
 
-    // NUEVO CAMBIO 1: La lista negra temporal para esta petición
+    // La lista negra temporal para esta petición
     let obrerosDescartados = []; 
 
-    // LOG DE ENTRADA
-    console.log(`\n--- 📥 NUEVA SOLICITUD ---`);
-    console.log(`Método: ${req.method} | Ruta: ${req.originalUrl}`);
+    // LOG DE ENTRADA (Refinado)
+    const requestId = Math.random().toString(36).substring(2, 7).toUpperCase();
+    console.log(`\n======================================================`);
+    console.log(`📥 [REQ: ${requestId}] NUEVA SOLICITUD: ${req.method} ${req.originalUrl}`);
+    
     if (req.method !== 'GET' && Object.keys(req.body).length > 0) {
-        console.log(`Body App: ${JSON.stringify(req.body)}`);
+        // Mostramos un resumen del body, no todo el chorizo
+        const resumenBody = { ...req.body };
+        // Si pasas fotos en base64 u otros datos masivos, escóndelos en el log
+        if (resumenBody.datos && resumenBody.datos.rutaImagen) {
+             resumenBody.datos.rutaImagen = "[IMAGEN OMITIDA EN LOG]";
+        }
+        console.log(formatoLog("Body Recibido", resumenBody));
     }
+    console.log(`======================================================`);
 
     while (intentos < 3 && !exito) {
-        // NUEVO CAMBIO 2: Filtramos activos Y que no hayan fallado en esta misma petición
+        // Filtramos activos Y que no hayan fallado en esta misma petición
         const obrerosDisponibles = OBREROS.filter(o => o.activo && !obrerosDescartados.includes(o.id));
         
         if (obrerosDisponibles.length === 0) {
-            console.error(`[🔥] ERROR CRÍTICO: No hay obreros disponibles o todos fallaron.`);
+            console.error(`\n[🔥 REQ: ${requestId}] ERROR CRÍTICO: No hay obreros disponibles o todos fallaron.`);
             return res.status(503).json({ success: false, message: "CRÍTICO: Todos los obreros están caídos o fallaron esta petición." });
         }
 
-        // NUEVO CAMBIO 3: La Ruleta Rusa para desempatar (Cura de la obsesión)
+        // La Ruleta Rusa para desempatar (Cura de la obsesión)
         const menorCarga = Math.min(...obrerosDisponibles.map(o => o.carga));
         const empatados = obrerosDisponibles.filter(o => o.carga === menorCarga);
         const obreroElegido = empatados[Math.floor(Math.random() * empatados.length)];
 
         try {
             obreroElegido.carga++;
-            console.log(`[>>] REDIRECCIONANDO -> Obrero ${obreroElegido.id} (Carga actual: ${obreroElegido.carga} | Intento ${intentos + 1}/3)`);
+            console.log(`\n  [>>] REDIRECCIONANDO [Intento ${intentos + 1}/3] -> Obrero ${obreroElegido.id}`);
 
             const respuesta = await axios({
                 method: req.method,
@@ -75,48 +99,97 @@ app.all('*', async (req, res) => {
                 timeout: 120000 
             });
 
-            // LOG DE SALIDA
+            // LOG DE SALIDA (Refinado)
             const duracion = Date.now() - inicioReloj;
-            const dataString = JSON.stringify(respuesta.data);
-            const preview = dataString.length > 250 ? dataString.substring(0, 250) + "... [Truncado]" : dataString;
-
-            console.log(`[<<] ✅ ÉXITO Obrero ${obreroElegido.id} en ${duracion}ms`);
-            console.log(`     Status: ${respuesta.status}`);
-            console.log(`     Respuesta: ${preview}`);
-            console.log(`--------------------------`);
+            console.log(`  [<<] ✅ ÉXITO Obrero ${obreroElegido.id} (Tardó: ${duracion}ms)`);
+            
+            // Verificamos si la respuesta indica éxito (ej: success: true)
+            const mensajeAviso = respuesta.data.success ? "Operación Completada" : "Respuesta Recibida (Validar Data)";
+            console.log(`       Status: ${respuesta.status} | ${mensajeAviso}`);
+            
+            // Logeamos la respuesta de forma elegante
+            if(respuesta.data) {
+                console.log(formatoLog("Data Respuesta", respuesta.data));
+            }
+            
+            console.log(`------------------------------------------------------`);
 
             obreroElegido.fallos = 0;
             res.status(respuesta.status).json(respuesta.data);
             exito = true;
 
-        } catch (error) {
+} catch (error) {
+            // Pre-procesamos los datos del error para usarlos en ambas lógicas
+            const statusError = error.response ? error.response.status : 500; // Por defecto 500 si es timeout/red
+            let mensajeErrorLog = error.message;
+            if(error.response && error.response.data) {
+                 mensajeErrorLog = typeof error.response.data === 'object' ? JSON.stringify(error.response.data) : error.response.data;
+            }
+
+            // ====================================================================
+            // 🔥 NUEVO: EXCEPCIÓN TÁCTICA PARA CONSULTA VIDANET 🔥
+            // Usamos req.path para ignorar parámetros GET (?letra=V&cedula=...)
+            // ====================================================================
+            if (req.path === '/consultar-deudas-vidanet') {
+                console.log(`\n  [⚠️] INFO VIDANET: Error de consulta en Obrero ${obreroElegido.id}.`);
+                console.log(`       Motivo: ${mensajeErrorLog.substring(0, 150)}`);
+                console.log(`       Acción: Retornando error al cliente. Sin castigos. Sin reintentos.`);
+                
+                const dataRespuesta = error.response && error.response.data 
+                    ? error.response.data 
+                    : { success: false, error: error.message };
+                
+                // Hacemos RETURN. Esto corta el ciclo "while" de inmediato,
+                // devuelve la respuesta al cliente, PERO el bloque "finally" 
+                // se sigue ejecutando para restar la carga del obrero.
+                return res.status(statusError).json(dataRespuesta);
+            }
+            // ====================================================================
+
+
+            // --- LÓGICA NORMAL DE CASTIGO PARA EL RESTO DE RUTAS ---
             intentos++;
             obreroElegido.fallos++;
             
-            // NUEVO CAMBIO 4: El Castigo (Se va a la lista negra temporal)
+            // El Castigo (Se va a la lista negra temporal de esta solicitud)
             obrerosDescartados.push(obreroElegido.id);
 
-            const errorDetalle = error.response ? JSON.stringify(error.response.data) : error.message;
-            console.error(`[❌] FALLO Obrero ${obreroElegido.id} (Intento ${intentos}/3)`);
-            console.error(`     Error: ${errorDetalle}`);
+            // LOG DE FALLO 
+            console.error(`\n  [❌] FALLO Obrero ${obreroElegido.id} (Intento ${intentos}/3)`);
+            console.error(`       Status: ${statusError}`);
+            console.error(`       Motivo: ${mensajeErrorLog.substring(0, 150)}${mensajeErrorLog.length > 150 ? '...' : ''}`);
 
-            if (obreroElegido.fallos >= 3) {
-                console.log(`[🚨] CIRCUIT BREAKER: Obrero ${obreroElegido.id} entra en CUARENTENA.`);
+            // --- PROTOCOLO DE AUTODESTRUCCIÓN (TOLERANCIA CERO: 2 FALLOS) ---
+            if (obreroElegido.fallos >= 2) {
+                console.log(`\n  [🚨] CIRCUIT BREAKER: Obrero ${obreroElegido.id} entra en CUARENTENA (Alcanzó ${obreroElegido.fallos} fallos).`);
                 obreroElegido.activo = false;
+
+                console.log(`  [🔫] Enviando orden de AUTODESTRUCCIÓN al Obrero ${obreroElegido.id}...`);
+                
+                axios.post(`${obreroElegido.url}/orden-66`, {}, {
+                    headers: { 'x-comandante-secret': 'IcaroSoft_Destruccion_Inminente_2026' }, 
+                    timeout: 5000 
+                }).catch(() => {
+                    console.log(`  [🤷] El Obrero ${obreroElegido.id} no pudo ni recibir la orden (posiblemente colapso total).`);
+                });
+
+                // Esperamos 30 segundos y lo revivimos 
                 setTimeout(() => {
                     obreroElegido.activo = true;
                     obreroElegido.fallos = 0;
-                    console.log(`[♻️] RESURRECCIÓN: Obrero ${obreroElegido.id} vuelve al servicio.`);
-                }, 300000);
+                    console.log(`\n  [♻️] RESURRECCIÓN: Fin de cuarentena (30s). Obrero ${obreroElegido.id} vuelve al servicio activo.`);
+                }, 30000); 
             }
-            errorFinal = errorDetalle;
+            errorFinal = mensajeErrorLog;
+
         } finally {
             obreroElegido.carga--;
         }
     }
 
     if (!exito) {
-        console.error(`[💀] SOLICITUD FALLIDA tras 3 intentos.`);
+        console.error(`\n[💀 REQ: ${requestId}] SOLICITUD FALLIDA tras 3 intentos con distintos obreros.`);
+        console.log(`======================================================\n`);
         res.status(500).json({ 
             success: false, 
             message: "Icarosoft está inestable. Reintentos agotados.",
@@ -128,7 +201,7 @@ app.all('*', async (req, res) => {
 const PORT = process.env.PORT || 8080;
 app.listen(PORT, () => {
     console.log(`\n======================================`);
-    console.log(`🚀 COMANDANTE V2`);
+    console.log(`🚀 COMANDANTE V2.5 (INTOLERANCIA)`);
     console.log(`📡 Puerto: ${PORT}`);
     console.log(`🤖 Obreros: ${OBREROS.length}`);
     console.log(`======================================\n`);
