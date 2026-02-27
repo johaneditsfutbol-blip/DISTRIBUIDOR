@@ -28,7 +28,7 @@ let HISTORIAL = [];
 const COLA_DE_ESPERA = [];
 const TIMEOUT_SALA_ESPERA = 45000; // 45 segundos
 
-const esperarTurno = (requestId) => {
+const esperarTurno = (requestId, etiqueta) => {
     return new Promise((resolve, reject) => {
         const timeoutCola = setTimeout(() => {
             const index = COLA_DE_ESPERA.findIndex(c => c.resolve === resolve);
@@ -36,7 +36,8 @@ const esperarTurno = (requestId) => {
             reject(new Error("TIMEOUT_COLA"));
         }, TIMEOUT_SALA_ESPERA);
 
-        COLA_DE_ESPERA.push({ resolve, timeoutCola, requestId });
+        // Ahora guardamos la etiqueta en la cola
+        COLA_DE_ESPERA.push({ resolve, timeoutCola, requestId, etiqueta });
     });
 };
 // ---------------------------------------
@@ -337,21 +338,33 @@ app.all('*', async (req, res) => {
 
     const requestId = Math.random().toString(36).substring(2, 7).toUpperCase();
     
-    let etiquetaCliente = "";
-    if (req.path === '/pagar' && req.body && req.body.id) {
-        etiquetaCliente = ` [Cliente: ${req.body.id}]`;
-    } else if (req.path === '/pagar-vidanet' && req.body && req.body.datos && req.body.datos.cedula) {
-        etiquetaCliente = ` [C.I: ${req.body.datos.cedula}]`;
+    // --- NUEVA EXTRACCIÓN UNIVERSAL DEL CLIENTE ---
+    let idCliente = "";
+    if (req.method === 'POST') {
+        if (req.path === '/pagar' && req.body && req.body.id) idCliente = req.body.id;
+        else if (req.path === '/pagar-vidanet' && req.body && req.body.datos && req.body.datos.cedula) idCliente = req.body.datos.cedula;
+    } else if (req.method === 'GET') {
+        if (req.query && req.query.id) idCliente = req.query.id;
+        else if (req.query && req.query.cedula) idCliente = req.query.cedula;
     }
     
-    agregarLog(requestId, 'NUEVA', `Solicitud ${req.method} ${req.path}${etiquetaCliente}`);
+    // Si hay cliente, creamos la etiqueta. Si no, queda vacía.
+    const etiqueta = idCliente ? `[👤 ${idCliente}] ` : "";
+
+    // Micro-función táctica: inyecta la etiqueta a todos los logs de ESTA solicitud
+    const log = (tipo, mensaje, obreroId = 'SYS', duracion = null) => {
+        agregarLog(requestId, tipo, `${etiqueta}${mensaje}`, obreroId, duracion);
+    };
+    // ----------------------------------------------
+
+    log('NUEVA', `Solicitud ${req.method} ${req.path}`);
     
     if (req.method !== 'GET' && Object.keys(req.body).length > 0) {
         const rBody = JSON.parse(JSON.stringify(req.body)); 
         if (rBody.datos && rBody.datos.rutaImagen) {
              rBody.datos.rutaImagen = "[Imagen Oculta solo en el Log]";
         }
-        console.log(formatoLogConsola(`Body [${requestId}]`, rBody));
+        console.log(formatoLogConsola(`${etiqueta}Body [${requestId}]`, rBody));
     }
 
     while (intentos < 3 && !exito) {
@@ -363,23 +376,18 @@ app.all('*', async (req, res) => {
             return true;
         });
         
-        // --- NUEVO: LÓGICA DE SALA DE ESPERA ---
         if (obrerosDisponibles.length === 0) {
-            agregarLog(requestId, 'COLA', `Escuadrón ocupado. Entrando a Sala de Espera (Posición: ${COLA_DE_ESPERA.length + 1})`);
+            log('COLA', `Escuadrón ocupado. Entrando a Sala de Espera (Posición: ${COLA_DE_ESPERA.length + 1})`);
             try {
-                // Pausamos esta petición específica
-                await esperarTurno(requestId);
-                // Si llegamos aquí, un obrero se liberó y nos dio el pase. Reiniciamos el ciclo while.
+                await esperarTurno(requestId, etiqueta); // Pasamos la etiqueta a la sala de espera
                 continue; 
             } catch (err) {
-                // Si explotó el timeout de 45s
                 if (err.message === "TIMEOUT_COLA") {
-                    agregarLog(requestId, 'ERROR', `Misión Abortada: Tiempo máximo en sala de espera superado.`);
+                    log('ERROR', `Misión Abortada: Tiempo máximo en sala de espera superado.`);
                     return res.status(503).json({ success: false, message: "Líneas saturadas. Por favor intenta de nuevo en unos minutos." });
                 }
             }
         }
-        // ----------------------------------------
 
         const menorCarga = Math.min(...obrerosDisponibles.map(o => o.carga));
         const empatados = obrerosDisponibles.filter(o => o.carga === menorCarga);
@@ -392,7 +400,7 @@ app.all('*', async (req, res) => {
                 obreroElegido.buscandoServicios = true;
             }
 
-            console.log(`  [>> REQ: ${requestId}] Intentando Obrero ${obreroElegido.id} (Intento ${intentos + 1}/3)`);
+            console.log(`  [>> REQ: ${requestId}] ${etiqueta}Intentando Obrero ${obreroElegido.id} (Intento ${intentos + 1}/3)`);
 
             const respuesta = await axios({
                 method: req.method,
@@ -404,15 +412,15 @@ app.all('*', async (req, res) => {
 
             const duracion = Date.now() - inicioReloj;
             
-            agregarLog(requestId, 'EXITO', `Respuesta HTTP ${respuesta.status} devuelta.`, obreroElegido.id, duracion);
-            if(respuesta.data) console.log(formatoLogConsola(`Respuesta [${requestId}]`, respuesta.data));
+            log('EXITO', `Respuesta HTTP ${respuesta.status} devuelta.`, obreroElegido.id, duracion);
+            if(respuesta.data) console.log(formatoLogConsola(`${etiqueta}Respuesta [${requestId}]`, respuesta.data));
 
             if (req.path === '/pagar') {
                 obreroElegido.cocinandoHasta = Date.now() + 60000;
-                agregarLog(requestId, 'INFO', `Let Him Cook (60s)${etiquetaCliente}`, obreroElegido.id);
+                log('INFO', `Let Him Cook (60s)`, obreroElegido.id);
             } else if (req.path === '/pagar-vidanet') {
                 obreroElegido.cocinandoHasta = Date.now() + 15000;
-                agregarLog(requestId, 'INFO', `Let Him Cook (15s)${etiquetaCliente}`, obreroElegido.id);
+                log('INFO', `Let Him Cook (15s)`, obreroElegido.id);
             }
 
             obreroElegido.fallos = 0;
@@ -429,7 +437,7 @@ app.all('*', async (req, res) => {
             }
 
             if (req.path === '/consultar-deudas-vidanet') {
-                agregarLog(requestId, 'INFO', `Vidanet rechazó consulta: ${msjResumido.substring(0, 50)}`, obreroElegido.id);
+                log('INFO', `Vidanet rechazó consulta: ${msjResumido.substring(0, 50)}`, obreroElegido.id);
                 const dataRespuesta = error.response && error.response.data ? error.response.data : { success: false, error: error.message };
                 return res.status(statusError).json(dataRespuesta);
             }
@@ -438,10 +446,10 @@ app.all('*', async (req, res) => {
             obreroElegido.fallos++;
             obrerosDescartados.push(obreroElegido.id);
 
-            agregarLog(requestId, 'ERROR', `Fallo Intento ${intentos}/3 (HTTP ${statusError}): ${msjResumido.substring(0,60)}`, obreroElegido.id);
+            log('ERROR', `Fallo Intento ${intentos}/3 (HTTP ${statusError}): ${msjResumido.substring(0,60)}`, obreroElegido.id);
 
             if (obreroElegido.fallos >= 2) {
-                agregarLog(requestId, 'ALERTA', `CIRCUIT BREAKER: Obrero en cuarentena (2 fallos). Enviando Purga.`, obreroElegido.id);
+                log('ALERTA', `CIRCUIT BREAKER: Obrero en cuarentena (2 fallos). Enviando Purga.`, obreroElegido.id);
                 obreroElegido.activo = false;
                 
                 axios.post(`${obreroElegido.url}/orden-66`, {}, { headers: { 'x-comandante-secret': 'IcaroSoft_Destruccion_Inminente_2026' }, timeout: 5000 }).catch(() => {});
@@ -452,6 +460,7 @@ app.all('*', async (req, res) => {
                     if(obj) {
                         obj.activo = true;
                         obj.fallos = 0;
+                        // Nota: Este se queda como agregarLog porque sucede en el futuro (40s después), no pertenece a esta Request.
                         agregarLog('SYS', 'INFO', `Fin de Cuarentena (40s). Obrero resucitado.`, idParaRevivir);
                     }
                 }, 40000); 
@@ -463,24 +472,22 @@ app.all('*', async (req, res) => {
                 obreroElegido.carga--;
                 if (req.path === '/buscar-servicios') {
                     obreroElegido.buscandoServicios = false;
-                    agregarLog(requestId, 'INFO', 'Candado Liberado: Termina búsqueda de servicios.', obreroElegido.id);
+                    log('INFO', 'Candado Liberado: Termina búsqueda de servicios.', obreroElegido.id);
                 }
             }
 
-            // --- NUEVO: LIBERADOR DE COLA ---
-            // Cuando este obrero termina TODO su proceso (éxito o fallo), llama al siguiente.
             if (COLA_DE_ESPERA.length > 0) {
                 const siguienteEnFila = COLA_DE_ESPERA.shift();
                 clearTimeout(siguienteEnFila.timeoutCola); 
-                agregarLog(siguienteEnFila.requestId, 'INFO', 'Saliendo de la sala de espera. Evaluando obreros...');
+                // Aquí usamos el agregarLog original pero le inyectamos la etiqueta del cliente en espera
+                agregarLog(siguienteEnFila.requestId, 'INFO', `${siguienteEnFila.etiqueta}Saliendo de la sala de espera. Evaluando obreros...`);
                 siguienteEnFila.resolve(); 
             }
-            // ---------------------------------
         }
     }
 
     if (!exito) {
-        agregarLog(requestId, 'ERROR', 'Misión Fallida: Reintentos agotados.');
+        log('ERROR', 'Misión Fallida: Reintentos agotados.');
         res.status(500).json({ success: false, message: "El escuadrón está inestable. Reintentos agotados.", detalle: errorFinal });
     }
 });
@@ -488,7 +495,7 @@ app.all('*', async (req, res) => {
 const PORT = process.env.PORT || 8080;
 app.listen(PORT, () => {
     console.log(`\n======================================`);
-    console.log(`🚀 COMANDANTE V4 (SALA DE ESPERA)`);
+    console.log(`🚀 COMANDANTE V4 (SALA DE ESPERA Y TELEMETRÍA)`);
     console.log(`📡 Puerto: ${PORT}`);
     console.log(`🤖 Obreros: ${OBREROS.length}`);
     console.log(`======================================\n`);
