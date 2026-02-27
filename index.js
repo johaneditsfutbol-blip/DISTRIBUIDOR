@@ -24,6 +24,10 @@ const OBREROS = [
 const MAX_LOGS = 1000;
 let HISTORIAL = [];
 
+// --- NUEVA BÓVEDA EXCLUSIVA PARA LOS JEFES (PAGOS EXITOSOS) ---
+const MAX_PAGOS = 2000;
+let PAGOS_EXITOSOS = [];
+
 // --- SISTEMA DE ENCOLAMIENTO ---
 const COLA_DE_ESPERA = [];
 const TIMEOUT_SALA_ESPERA = 45000; // 45 segundos
@@ -77,7 +81,7 @@ const formatoLogConsola = (titulo, objeto) => {
 // ============================================================================
 
 app.get('/api/tactico/estado', (req, res) => {
-    res.json({ obreros: OBREROS, historial: HISTORIAL, encolados: COLA_DE_ESPERA.length });
+    res.json({ obreros: OBREROS, historial: HISTORIAL, encolados: COLA_DE_ESPERA.length, pagos: PAGOS_EXITOSOS });
 });
 
 app.post('/api/tactico/orden66/:id', (req, res) => {
@@ -157,29 +161,23 @@ app.get('/status', (req, res) => {
                 box-shadow: inset 0 0 20px rgba(0,0,0,0.5);
                 position: relative;
             }
-            .hud-panel::before {
-                content: ''; position: absolute; top: -1px; left: -1px; width: 20px; height: 20px;
-                border-top: 1px solid #D4AF37; border-left: 1px solid #D4AF37; opacity: 0.7;
-            }
-            .hud-panel::after {
-                content: ''; position: absolute; bottom: -1px; right: -1px; width: 20px; height: 20px;
-                border-bottom: 1px solid #D4AF37; border-right: 1px solid #D4AF37; opacity: 0.7;
-            }
+            .hud-panel::before { content: ''; position: absolute; top: -1px; left: -1px; width: 20px; height: 20px; border-top: 1px solid #D4AF37; border-left: 1px solid #D4AF37; opacity: 0.7; }
+            .hud-panel::after { content: ''; position: absolute; bottom: -1px; right: -1px; width: 20px; height: 20px; border-bottom: 1px solid #D4AF37; border-right: 1px solid #D4AF37; opacity: 0.7; }
             .gold-glow { text-shadow: 0 0 10px rgba(212, 175, 55, 0.4); }
             .border-glow { box-shadow: 0 0 15px rgba(212, 175, 55, 0.15); border-color: rgba(212, 175, 55, 0.4); }
-            
-            /* Animación Radar Base */
             .radar-line { width: 100%; height: 1px; background: linear-gradient(90deg, transparent, rgba(212,175,55,0.3), transparent); position: absolute; top: 0; animation: scan 4s linear infinite; pointer-events: none;}
             @keyframes scan { 0% { top: 0; opacity: 0; } 10% { opacity: 1; } 90% { opacity: 1; } 100% { top: 100%; opacity: 0; } }
-            
-            /* Custom Scrollbar Premium */
             ::-webkit-scrollbar { width: 4px; }
             ::-webkit-scrollbar-track { background: #050505; }
             ::-webkit-scrollbar-thumb { background: #333; }
             ::-webkit-scrollbar-thumb:hover { background: #D4AF37; }
-
-            /* Efecto Micro-Data */
             .micro-data { font-size: 0.55rem; letter-spacing: 0.1em; color: #555; text-transform: uppercase; }
+            
+            /* TABS CSS */
+            .tab-btn { transition: all 0.3s ease; }
+            .tab-active { color: #D4AF37; border-bottom: 2px solid #D4AF37; text-shadow: 0 0 8px rgba(212, 175, 55, 0.4); }
+            .tab-inactive { color: #555; border-bottom: 2px solid transparent; }
+            .tab-inactive:hover { color: #888; border-color: #333; }
         </style>
     </head>
     <body class="p-4 md:p-6 min-h-screen relative flex flex-col font-mono selection:bg-gold-500 selection:text-black">
@@ -196,9 +194,7 @@ app.get('/status', (req, res) => {
                     <div>
                         <h1 class="text-3xl font-bold text-white tracking-widest font-hud gold-glow uppercase">NEXUS<span class="text-gold-500 font-light">_CORE</span></h1>
                         <div class="flex gap-3 text-[10px] tracking-widest text-gold-600 font-hud mt-1">
-                            <span>SYS_ID: OP-77X</span>
-                            <span>|</span>
-                            <span>NODE: RAILWAY_PRD</span>
+                            <span>SYS_ID: OP-77X</span> <span>|</span> <span>NODE: RAILWAY_PRD</span>
                         </div>
                     </div>
                 </div>
@@ -207,7 +203,7 @@ app.get('/status', (req, res) => {
                     <div class="flex items-center gap-4 font-hud text-xs tracking-widest">
                         <div id="badge-cola" class="flex items-center gap-2 border border-dark-800 bg-dark-900 px-3 py-1 transition-all duration-300">
                             <i class="fa-solid fa-server text-gray-500" id="icon-cola"></i>
-                            <span id="txt-cola" class="text-gray-500">QUEUE: 0</span>
+                            <span id="txt-cola" class="text-gray-500">QUEUE: 00</span>
                         </div>
                         <div class="flex items-center gap-2 border border-gold-500/30 bg-gold-900/10 px-3 py-1">
                             <span class="relative flex h-2 w-2">
@@ -226,45 +222,93 @@ app.get('/status', (req, res) => {
             
             <div id="grid-obreros" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mb-6"></div>
 
-            <div class="hud-panel p-4 flex-grow flex flex-col mt-2">
-                <div class="flex flex-col md:flex-row justify-between items-start md:items-end mb-4 pb-3 border-b border-dark-800 gap-4">
-                    <div>
-                        <h2 class="text-xl font-bold text-white font-hud tracking-widest flex items-center">
-                            <i class="fa-solid fa-terminal text-gold-500 mr-2 text-sm"></i> TELEMETRY_LOG
-                        </h2>
-                        <span class="micro-data">MAX_BUFFER: 1000 STRINGS</span>
-                    </div>
-                    
-                    <div class="flex flex-col sm:flex-row gap-2 w-full md:w-auto font-hud text-sm">
-                        <div class="relative w-full sm:w-64">
-                            <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-                                <i class="fa-solid fa-magnifying-glass text-gold-600"></i>
-                            </div>
-                            <input type="text" id="input-busqueda" placeholder="QUERY ID / REQ / TRACE..." class="bg-dark-900 border border-dark-800 text-gray-300 placeholder-gray-700 block w-full pl-8 p-1.5 focus:border-gold-500 outline-none transition-colors tracking-wider">
+            <div class="flex gap-6 mb-2 font-hud tracking-widest uppercase text-sm px-2">
+                <button id="btn-tab-telemetry" class="tab-btn tab-active pb-1 flex items-center gap-2" onclick="switchTab('telemetry')">
+                    <i class="fa-solid fa-satellite-dish"></i> TELEMETRY_LOG
+                </button>
+                <button id="btn-tab-ledger" class="tab-btn tab-inactive pb-1 flex items-center gap-2" onclick="switchTab('ledger')">
+                    <i class="fa-solid fa-vault"></i> PAYMENT_LEDGER
+                </button>
+            </div>
+
+            <div class="hud-panel p-4 flex-grow flex flex-col relative overflow-hidden h-[450px]">
+                
+                <div id="view-telemetry" class="w-full h-full flex flex-col">
+                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-end mb-4 pb-3 border-b border-dark-800 gap-4">
+                        <div>
+                            <span class="micro-data">MAX_BUFFER: 1000 STRINGS</span>
                         </div>
-                        <select id="filtro-tipo" class="bg-dark-900 border border-dark-800 text-gold-500 block w-full sm:w-32 p-1.5 outline-none cursor-pointer tracking-wider font-semibold">
-                            <option value="ALL">ALL_EVENTS</option>
-                            <option value="ERROR">ERRORS</option>
-                            <option value="EXITO">SUCCESS</option>
-                            <option value="COLA">QUEUED</option>
-                            <option value="ALERTA">ALERTS</option>
-                            <option value="NUEVA">INBOUND</option>
-                            <option value="INFO">INFO_TRACE</option>
-                        </select>
+                        <div class="flex gap-2 w-full sm:w-auto font-hud text-xs">
+                            <div class="relative w-full sm:w-64">
+                                <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none"><i class="fa-solid fa-magnifying-glass text-gold-600"></i></div>
+                                <input type="text" id="input-busqueda-tel" placeholder="QUERY ID / REQ..." class="bg-dark-900 border border-dark-800 text-gray-300 placeholder-gray-700 block w-full pl-8 p-1.5 focus:border-gold-500 outline-none transition-colors">
+                            </div>
+                            <select id="filtro-tipo-tel" class="bg-dark-900 border border-dark-800 text-gold-500 block w-full sm:w-32 p-1.5 outline-none cursor-pointer font-semibold">
+                                <option value="ALL">ALL_EVENTS</option>
+                                <option value="ERROR">ERRORS</option>
+                                <option value="EXITO">SUCCESS</option>
+                                <option value="COLA">QUEUED</option>
+                                <option value="INFO">INFO_TRACE</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div id="terminal-logs" class="overflow-y-auto flex-grow space-y-1 pr-2 mb-3"></div>
+                    <div class="flex justify-between items-center border-t border-dark-800 pt-2 font-hud tracking-widest uppercase">
+                        <span id="txt-resultados-tel" class="text-gold-500 text-xs font-bold">MATCHES: 0</span>
+                        <div class="flex items-center gap-1">
+                            <button id="btn-prev-tel" class="w-8 h-6 bg-dark-900 text-gold-600 border border-dark-800 hover:border-gold-500 disabled:opacity-20 transition-all"><i class="fa-solid fa-caret-left"></i></button>
+                            <span id="txt-paginacion-tel" class="px-4 text-xs font-bold text-white bg-black border border-dark-800 h-6 flex items-center">1 / 1</span>
+                            <button id="btn-next-tel" class="w-8 h-6 bg-dark-900 text-gold-600 border border-dark-800 hover:border-gold-500 disabled:opacity-20 transition-all"><i class="fa-solid fa-caret-right"></i></button>
+                        </div>
                     </div>
                 </div>
 
-                <div id="terminal-logs" class="overflow-y-auto flex-grow h-[350px] space-y-1 pr-2 mb-3"></div>
-
-                <div class="flex justify-between items-center border-t border-dark-800 pt-3 mt-auto font-hud tracking-widest uppercase">
-                    <div class="flex flex-col">
-                        <span id="txt-resultados" class="text-gold-500 text-xs font-bold">MATCHES: 0</span>
-                        <span class="micro-data text-gray-600">DB_SIZE: <span id="txt-dbsize">0</span></span>
+                <div id="view-ledger" class="w-full h-full flex flex-col hidden">
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4 border-b border-dark-800 pb-4">
+                        <div class="bg-dark-900 border border-dark-800 p-2 text-center">
+                            <div class="micro-data mb-1 text-gray-500">TOTAL PAGOS REGISTRADOS</div>
+                            <div class="text-2xl font-hud font-bold text-white" id="stat-total">00</div>
+                        </div>
+                        <div class="bg-dark-900 border border-sky-900/30 p-2 text-center relative overflow-hidden">
+                            <div class="absolute -right-2 -top-2 text-sky-500/10 text-4xl"><i class="fa-solid fa-globe"></i></div>
+                            <div class="micro-data mb-1 text-sky-500">PAGOS VIDANET</div>
+                            <div class="text-2xl font-hud font-bold text-sky-400" id="stat-vidanet">00</div>
+                        </div>
+                        <div class="bg-dark-900 border border-indigo-900/30 p-2 text-center relative overflow-hidden">
+                            <div class="absolute -right-2 -top-2 text-indigo-500/10 text-4xl"><i class="fa-solid fa-building"></i></div>
+                            <div class="micro-data mb-1 text-indigo-500">PAGOS ICAROSOFT</div>
+                            <div class="text-2xl font-hud font-bold text-indigo-400" id="stat-icaro">00</div>
+                        </div>
+                        <div class="bg-dark-900 border border-dark-800 p-2 text-center">
+                            <div class="micro-data mb-1 text-gray-500">TIEMPO PROMEDIO (AVG)</div>
+                            <div class="text-2xl font-hud font-bold text-green-500" id="stat-avg">0.0s</div>
+                        </div>
                     </div>
-                    <div class="flex items-center gap-1">
-                        <button id="btn-prev" class="w-8 h-6 bg-dark-900 text-gold-600 border border-dark-800 hover:border-gold-500 hover:text-gold-400 disabled:opacity-20 disabled:cursor-not-allowed transition-all"><i class="fa-solid fa-caret-left"></i></button>
-                        <span id="txt-paginacion" class="px-4 text-xs font-bold text-white bg-black border border-dark-800 h-6 flex items-center">1 / 1</span>
-                        <button id="btn-next" class="w-8 h-6 bg-dark-900 text-gold-600 border border-dark-800 hover:border-gold-500 hover:text-gold-400 disabled:opacity-20 disabled:cursor-not-allowed transition-all"><i class="fa-solid fa-caret-right"></i></button>
+
+                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-end mb-4 gap-4">
+                        <span class="font-hud tracking-widest text-gold-500 text-sm"><i class="fa-solid fa-list-check mr-2"></i>HISTÓRICO RECIENTE</span>
+                        <div class="flex gap-2 w-full sm:w-auto font-hud text-xs">
+                            <div class="relative w-full sm:w-64">
+                                <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none"><i class="fa-solid fa-magnifying-glass text-gold-600"></i></div>
+                                <input type="text" id="input-busqueda-led" placeholder="CÉDULA / REQ ID..." class="bg-dark-900 border border-dark-800 text-gray-300 placeholder-gray-700 block w-full pl-8 p-1.5 focus:border-gold-500 outline-none">
+                            </div>
+                            <select id="filtro-tipo-led" class="bg-dark-900 border border-dark-800 text-gold-500 block w-full sm:w-32 p-1.5 outline-none cursor-pointer font-semibold">
+                                <option value="ALL">AMBOS SISTEMAS</option>
+                                <option value="VIDANET">SOLO VIDANET</option>
+                                <option value="ICAROSOFT">SOLO ICAROSOFT</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div id="ledger-logs" class="overflow-y-auto flex-grow space-y-2 pr-2 mb-3"></div>
+
+                    <div class="flex justify-between items-center border-t border-dark-800 pt-2 font-hud tracking-widest uppercase">
+                        <span id="txt-resultados-led" class="text-gold-500 text-xs font-bold">MATCHES: 0</span>
+                        <div class="flex items-center gap-1">
+                            <button id="btn-prev-led" class="w-8 h-6 bg-dark-900 text-gold-600 border border-dark-800 hover:border-gold-500 disabled:opacity-20 transition-all"><i class="fa-solid fa-caret-left"></i></button>
+                            <span id="txt-paginacion-led" class="px-4 text-xs font-bold text-white bg-black border border-dark-800 h-6 flex items-center">1 / 1</span>
+                            <button id="btn-next-led" class="w-8 h-6 bg-dark-900 text-gold-600 border border-dark-800 hover:border-gold-500 disabled:opacity-20 transition-all"><i class="fa-solid fa-caret-right"></i></button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -273,31 +317,57 @@ app.get('/status', (req, res) => {
         <script>
             // --- ESTADO LOCAL DEL DASHBOARD ---
             let historialGlobal = [];
-            let paginaActual = 1;
-            const LOGS_POR_PAGINA = 50;
+            let pagosGlobal = [];
+            let vistaActual = 'telemetry';
+            
+            let pagTel = 1, pagLed = 1;
+            const LIMIT_TEL = 50, LIMIT_LED = 20;
 
             const grid = document.getElementById('grid-obreros');
             const terminal = document.getElementById('terminal-logs');
+            const ledger = document.getElementById('ledger-logs');
             const txtActualizacion = document.getElementById('txt-actualizacion');
+            const badgeCola = document.getElementById('badge-cola');
             const txtCola = document.getElementById('txt-cola');
             const iconCola = document.getElementById('icon-cola');
-            const badgeCola = document.getElementById('badge-cola');
-            
-            const inputBusqueda = document.getElementById('input-busqueda');
-            const filtroTipo = document.getElementById('filtro-tipo');
-            const btnPrev = document.getElementById('btn-prev');
-            const btnNext = document.getElementById('btn-next');
-            const txtPaginacion = document.getElementById('txt-paginacion');
-            const txtResultados = document.getElementById('txt-resultados');
-            const txtDbSize = document.getElementById('txt-dbsize');
 
-            inputBusqueda.addEventListener('input', () => { paginaActual = 1; renderizarTerminal(); });
-            filtroTipo.addEventListener('change', () => { paginaActual = 1; renderizarTerminal(); });
-            btnPrev.addEventListener('click', () => { if (paginaActual > 1) { paginaActual--; renderizarTerminal(); } });
-            btnNext.addEventListener('click', () => { paginaActual++; renderizarTerminal(); });
+            // Listeners Pestañas
+            function switchTab(tab) {
+                vistaActual = tab;
+                document.getElementById('view-telemetry').classList.toggle('hidden', tab !== 'telemetry');
+                document.getElementById('view-ledger').classList.toggle('hidden', tab !== 'ledger');
+                
+                const btnTel = document.getElementById('btn-tab-telemetry');
+                const btnLed = document.getElementById('btn-tab-ledger');
+                
+                if(tab === 'telemetry') {
+                    btnTel.className = "tab-btn tab-active pb-1 flex items-center gap-2";
+                    btnLed.className = "tab-btn tab-inactive pb-1 flex items-center gap-2";
+                } else {
+                    btnTel.className = "tab-btn tab-inactive pb-1 flex items-center gap-2";
+                    btnLed.className = "tab-btn tab-active pb-1 flex items-center gap-2";
+                }
+                renderizarVistas();
+            }
 
-            const formatearHora = (ms) => {
+            // Listeners Telemetría
+            document.getElementById('input-busqueda-tel').addEventListener('input', () => { pagTel = 1; renderizarTelemetria(); });
+            document.getElementById('filtro-tipo-tel').addEventListener('change', () => { pagTel = 1; renderizarTelemetria(); });
+            document.getElementById('btn-prev-tel').addEventListener('click', () => { if(pagTel > 1) { pagTel--; renderizarTelemetria(); } });
+            document.getElementById('btn-next-tel').addEventListener('click', () => { pagTel++; renderizarTelemetria(); });
+
+            // Listeners Ledger
+            document.getElementById('input-busqueda-led').addEventListener('input', () => { pagLed = 1; renderizarLedger(); });
+            document.getElementById('filtro-tipo-led').addEventListener('change', () => { pagLed = 1; renderizarLedger(); });
+            document.getElementById('btn-prev-led').addEventListener('click', () => { if(pagLed > 1) { pagLed--; renderizarLedger(); } });
+            document.getElementById('btn-next-led').addEventListener('click', () => { pagLed++; renderizarLedger(); });
+
+            const formatearHora = (ms, formatoCompleto = false) => {
                 const d = new Date(ms);
+                if (formatoCompleto) {
+                    const meses = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
+                    return \`\${d.getDate().toString().padStart(2,'0')} \${meses[d.getMonth()]} \${d.getFullYear()} | \${d.toLocaleTimeString('en-US', { hour12: false })}\`;
+                }
                 return d.toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute:'2-digit', second:'2-digit' }) + '.' + String(d.getMilliseconds()).padStart(3, '0');
             };
 
@@ -307,11 +377,11 @@ app.get('/status', (req, res) => {
                     const data = await respuesta.json(); 
                     
                     renderizarObreros(data.obreros);
-                    
                     historialGlobal = data.historial;
-                    renderizarTerminal();
+                    pagosGlobal = data.pagos || [];
+                    renderizarVistas();
                     
-                    // UI Cola Premium
+                    // UI Cola
                     txtCola.innerText = 'QUEUE: ' + data.encolados.toString().padStart(2, '0');
                     if (data.encolados > 0) {
                         badgeCola.className = 'flex items-center gap-2 border border-gold-500/50 bg-gold-900/20 px-3 py-1 transition-all duration-300 border-glow';
@@ -326,29 +396,24 @@ app.get('/status', (req, res) => {
                     const ahora = new Date();
                     txtActualizacion.innerText = \`SYNC: \${ahora.toLocaleTimeString('en-US', {hour12: false})}\`;
                     txtActualizacion.classList.replace('text-red-500', 'text-gray-600');
-                } catch (error) {
-                    txtActualizacion.innerText = "LINK_LOST";
-                    txtActualizacion.classList.replace('text-gray-600', 'text-red-500');
-                }
+                } catch (error) {}
+            }
+
+            function renderizarVistas() {
+                if(vistaActual === 'telemetry') renderizarTelemetria();
+                else renderizarLedger();
             }
 
             function renderizarObreros(obreros) {
                 const tiempoActual = Date.now();
                 let htmlTemp = '';
-
                 obreros.forEach(o => {
                     const isVivo = o.activo;
                     const isCocinando = o.cocinandoHasta > tiempoActual;
                     const segCoccion = isCocinando ? Math.ceil((o.cocinandoHasta - tiempoActual) / 1000) : 0;
-                    
-                    // Estilos base de la tarjeta
                     const bordeEstado = isVivo ? 'border-dark-800 hover:border-gold-500/30' : 'border-red-900/50 border-glow';
                     
-                    // Badges Técnicos
-                    let statusIcon = isVivo 
-                        ? \`<i class="fa-solid fa-check text-green-500 text-[10px]"></i> <span class="text-green-500">OPR_RDY</span>\`
-                        : \`<i class="fa-solid fa-skull text-red-500 text-[10px] animate-pulse"></i> <span class="text-red-500">QUARANTINE</span>\`;
-
+                    let statusIcon = isVivo ? \`<i class="fa-solid fa-check text-green-500 text-[10px]"></i> <span class="text-green-500">OPR_RDY</span>\` : \`<i class="fa-solid fa-skull text-red-500 text-[10px] animate-pulse"></i> <span class="text-red-500">QUARANTINE</span>\`;
                     let opsBadges = '';
                     if (isCocinando) opsBadges += \`<div class="border border-amber-500/30 bg-amber-900/10 text-amber-500 px-1.5 py-0.5"><i class="fa-solid fa-fire animate-pulse mr-1"></i>\${segCoccion}s</div>\`;
                     if (o.buscandoServicios) opsBadges += \`<div class="border border-sky-500/30 bg-sky-900/10 text-sky-400 px-1.5 py-0.5"><i class="fa-solid fa-satellite-dish animate-pulse mr-1"></i>SRV</div>\`;
@@ -368,72 +433,57 @@ app.get('/status', (req, res) => {
                                 <div class="micro-data">ERRORS</div>
                             </div>
                         </div>
-
-                        <div class="flex gap-1 mb-2 text-[8px] font-hud tracking-widest uppercase h-4">
-                            \${opsBadges}
-                        </div>
-
+                        <div class="flex gap-1 mb-2 text-[8px] font-hud tracking-widest uppercase h-4">\${opsBadges}</div>
                         <div class="mb-3">
                             <div class="flex justify-between font-hud text-[9px] tracking-widest text-gray-500 mb-1">
-                                <span>LOAD_BAL</span>
-                                <span class="text-gray-300">\${o.carga} REQ</span>
+                                <span>LOAD_BAL</span><span class="text-gray-300">\${o.carga} REQ</span>
                             </div>
                             <div class="w-full bg-dark-900 border border-dark-800 h-1">
                                 <div class="\${colorBarra} h-full transition-all duration-500" style="width: \${porcentajeCarga}%"></div>
                             </div>
                         </div>
-
                         <div class="grid grid-cols-2 gap-2 mt-auto font-hud text-[10px] tracking-widest uppercase">
-                            <button onclick="ejecutarOrden(\${o.id})" class="bg-dark-900 text-gray-500 border border-dark-800 hover:border-red-500 hover:text-red-500 py-1 transition-colors flex justify-center items-center gap-1 group">
+                            <button onclick="ejecutarOrden(\${o.id})" class="bg-dark-900 text-gray-500 border border-dark-800 hover:border-red-500 hover:text-red-500 py-1 transition-colors group">
                                 <i class="fa-solid fa-radiation group-hover:animate-spin"></i> PURGE
                             </button>
-                            <button onclick="revivir(\${o.id})" class="bg-dark-900 text-gray-500 border border-dark-800 hover:border-gold-500 hover:text-gold-400 py-1 transition-colors flex justify-center items-center gap-1">
+                            <button onclick="revivir(\${o.id})" class="bg-dark-900 text-gray-500 border border-dark-800 hover:border-gold-500 hover:text-gold-400 py-1 transition-colors">
                                 <i class="fa-solid fa-bolt"></i> FORCE_UP
                             </button>
                         </div>
-                    </div>
-                    \`;
+                    </div>\`;
                 });
                 grid.innerHTML = htmlTemp;
             }
 
-            function renderizarTerminal() {
-                const busqueda = inputBusqueda.value.toLowerCase().trim();
-                const tipoFiltrado = filtroTipo.value;
+            function renderizarTelemetria() {
+                const busqueda = document.getElementById('input-busqueda-tel').value.toLowerCase().trim();
+                const tipoFiltrado = document.getElementById('filtro-tipo-tel').value;
 
                 let logsFiltrados = historialGlobal.filter(log => {
                     const coincideTipo = tipoFiltrado === 'ALL' || log.tipo === tipoFiltrado;
                     const textoCompleto = \`\${log.reqId} \${log.mensaje} \${log.obreroId}\`.toLowerCase();
-                    const coincideBusqueda = busqueda === '' || textoCompleto.includes(busqueda);
-                    return coincideTipo && coincideBusqueda;
+                    return coincideTipo && (busqueda === '' || textoCompleto.includes(busqueda));
                 });
 
-                const totalPaginas = Math.max(1, Math.ceil(logsFiltrados.length / LOGS_POR_PAGINA));
-                if (paginaActual > totalPaginas) paginaActual = totalPaginas;
+                const totalPaginas = Math.max(1, Math.ceil(logsFiltrados.length / LIMIT_TEL));
+                if (pagTel > totalPaginas) pagTel = totalPaginas;
 
-                const indexInicio = (paginaActual - 1) * LOGS_POR_PAGINA;
-                const indexFin = indexInicio + LOGS_POR_PAGINA;
-                const logsPaginados = logsFiltrados.slice(indexInicio, indexFin);
-
-                txtPaginacion.innerText = \`\${paginaActual.toString().padStart(2, '0')} / \${totalPaginas.toString().padStart(2, '0')}\`;
-                txtResultados.innerText = \`MATCHES: \${logsFiltrados.length.toString().padStart(4, '0')}\`;
-                txtDbSize.innerText = historialGlobal.length.toString().padStart(4, '0');
-                
-                btnPrev.disabled = paginaActual === 1;
-                btnNext.disabled = paginaActual === totalPaginas;
+                document.getElementById('txt-paginacion-tel').innerText = \`\${pagTel.toString().padStart(2, '0')} / \${totalPaginas.toString().padStart(2, '0')}\`;
+                document.getElementById('txt-resultados-tel').innerText = \`MATCHES: \${logsFiltrados.length.toString().padStart(4, '0')}\`;
+                document.getElementById('btn-prev-tel').disabled = pagTel === 1;
+                document.getElementById('btn-next-tel').disabled = pagTel === totalPaginas;
 
                 let htmlTemp = '';
-                if(logsPaginados.length === 0) {
+                if(logsFiltrados.length === 0) {
                     terminal.innerHTML = '<div class="text-gray-700 italic mt-4 text-center font-hud tracking-widest text-sm">NO_DATA_FOUND // AWAITING_INPUT</div>';
                     return;
                 }
 
-                logsPaginados.forEach(log => {
+                logsFiltrados.slice((pagTel - 1) * LIMIT_TEL, pagTel * LIMIT_TEL).forEach(log => {
                     let colorBase = 'text-gray-400';
                     let bgBadge = 'text-gray-500';
                     let iconClass = 'fa-solid fa-microchip';
 
-                    // Reemplazo estricto de Emojis por Iconos Premium
                     if (log.tipo === 'NUEVA') { bgBadge = 'text-sky-400'; iconClass = 'fa-solid fa-arrow-right-to-bracket'; }
                     if (log.tipo === 'EXITO') { bgBadge = 'text-green-500'; iconClass = 'fa-solid fa-check-double'; colorBase = 'text-gray-300'; }
                     if (log.tipo === 'ERROR') { bgBadge = 'text-red-500'; iconClass = 'fa-solid fa-triangle-exclamation'; colorBase = 'text-red-400'; }
@@ -450,10 +500,71 @@ app.get('/status', (req, res) => {
                         <div class="\${bgBadge} w-4 shrink-0 text-center mt-0.5"><i class="\${iconClass}"></i></div>
                         <div class="text-gray-500 w-14 shrink-0 text-center mt-0.5 tracking-wider text-[10px] border border-dark-800 bg-dark-900">\${log.reqId}</div>
                         <div class="\${colorBase} break-all flex-grow leading-snug text-[11px]">\${log.mensaje} \${obreroTag}\${duracionStr}</div>
-                    </div>
-                    \`;
+                    </div>\`;
                 });
                 terminal.innerHTML = htmlTemp;
+            }
+
+            function renderizarLedger() {
+                const busqueda = document.getElementById('input-busqueda-led').value.toLowerCase().trim();
+                const tipoFiltrado = document.getElementById('filtro-tipo-led').value;
+
+                // Actualizar Stats
+                let cVidanet = 0, cIcaro = 0, sumTime = 0;
+                pagosGlobal.forEach(p => {
+                    if(p.sistema === 'VIDANET') cVidanet++; else cIcaro++;
+                    if(p.duracion) sumTime += p.duracion;
+                });
+                const totalP = pagosGlobal.length;
+                document.getElementById('stat-total').innerText = totalP.toString().padStart(2, '0');
+                document.getElementById('stat-vidanet').innerText = cVidanet.toString().padStart(2, '0');
+                document.getElementById('stat-icaro').innerText = cIcaro.toString().padStart(2, '0');
+                document.getElementById('stat-avg').innerText = totalP > 0 ? (sumTime / totalP / 1000).toFixed(1) + 's' : '0.0s';
+
+                let filtrados = pagosGlobal.filter(p => {
+                    const coincideTipo = tipoFiltrado === 'ALL' || p.sistema === tipoFiltrado;
+                    const textoCompleto = \`\${p.cliente} \${p.reqId}\`.toLowerCase();
+                    return coincideTipo && (busqueda === '' || textoCompleto.includes(busqueda));
+                });
+
+                const totalPaginas = Math.max(1, Math.ceil(filtrados.length / LIMIT_LED));
+                if (pagLed > totalPaginas) pagLed = totalPaginas;
+
+                document.getElementById('txt-paginacion-led').innerText = \`\${pagLed.toString().padStart(2, '0')} / \${totalPaginas.toString().padStart(2, '0')}\`;
+                document.getElementById('txt-resultados-led').innerText = \`MATCHES: \${filtrados.length.toString().padStart(4, '0')}\`;
+                document.getElementById('btn-prev-led').disabled = pagLed === 1;
+                document.getElementById('btn-next-led').disabled = pagLed === totalPaginas;
+
+                let htmlTemp = '';
+                if(filtrados.length === 0) {
+                    ledger.innerHTML = '<div class="text-gray-700 italic mt-8 text-center font-hud tracking-widest text-sm">NO_PAYMENTS_REGISTERED</div>';
+                    return;
+                }
+
+                filtrados.slice((pagLed - 1) * LIMIT_LED, pagLed * LIMIT_LED).forEach(p => {
+                    const esVidanet = p.sistema === 'VIDANET';
+                    const colorSis = esVidanet ? 'text-sky-400' : 'text-indigo-400';
+                    const bgSis = esVidanet ? 'bg-sky-900/20 border-sky-400/30' : 'bg-indigo-900/20 border-indigo-400/30';
+                    const segs = p.duracion ? (p.duracion / 1000).toFixed(1) + 's' : 'N/A';
+
+                    htmlTemp += \`
+                    <div class="flex items-center justify-between border border-dark-800 bg-dark-900/50 p-2.5 hover:border-gold-500/50 transition-colors">
+                        <div class="flex items-center gap-3">
+                            <div class="w-8 h-8 rounded-full bg-green-900/20 border border-green-500/30 flex items-center justify-center">
+                                <i class="fa-solid fa-check text-green-500"></i>
+                            </div>
+                            <div>
+                                <div class="text-gold-400 font-bold tracking-widest text-sm">\${p.cliente}</div>
+                                <div class="micro-data text-gray-500 mt-0.5">\${formatearHora(p.tiempo, true)} | REQ: \${p.reqId}</div>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <div class="\${colorSis} text-[10px] font-bold border \${bgSis} px-1.5 py-0.5 rounded-sm inline-block">\${p.sistema}</div>
+                            <div class="micro-data text-gray-500 mt-1 font-mono">TIME: <span class="text-gray-300">\${segs}</span></div>
+                        </div>
+                    </div>\`;
+                });
+                ledger.innerHTML = htmlTemp;
             }
 
             async function ejecutarOrden(id) {
@@ -585,6 +696,19 @@ app.all('*', async (req, res) => {
             
             log('EXITO', `Respuesta HTTP ${respuesta.status} devuelta.`, obreroElegido.id, duracion);
             if(respuesta.data) console.log(formatoLogConsola(`${etiqueta}Respuesta [${requestId}]`, respuesta.data));
+
+            // --- INYECCIÓN DEL REGISTRO PARA LOS JEFES ---
+            if (esRutaPago) {
+                PAGOS_EXITOSOS.unshift({
+                    reqId: requestId,
+                    tiempo: Date.now(),
+                    cliente: idCliente || 'DESCONOCIDO',
+                    sistema: req.path === '/pagar' ? 'ICAROSOFT' : 'VIDANET',
+                    duracion: duracion
+                });
+                if (PAGOS_EXITOSOS.length > MAX_PAGOS) PAGOS_EXITOSOS.pop();
+            }
+            // ---------------------------------------------
 
             if (req.path === '/pagar') {
                 obreroElegido.cocinandoHasta = Date.now() + 60000;
