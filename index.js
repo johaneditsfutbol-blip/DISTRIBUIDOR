@@ -498,6 +498,10 @@ app.all('*', async (req, res) => {
         const empatados = obrerosDisponibles.filter(o => o.carga === menorCarga);
         obreroElegido = empatados[Math.floor(Math.random() * empatados.length)];
 
+        // --- CORTACIRCUITOS DINÁMICO (TIMEOUT) ---
+        const limiteTiempo = req.path === '/buscar-servicios' ? 15000 : 120000;
+        // ------------------------------------------
+
         try {
             obreroElegido.carga++;
             
@@ -512,7 +516,7 @@ app.all('*', async (req, res) => {
                 url: `${obreroElegido.url}${req.originalUrl}`,
                 data: req.method !== 'GET' ? req.body : undefined,
                 headers: { 'Content-Type': 'application/json' },
-                timeout: 120000 
+                timeout: limiteTiempo // <-- SE APLICA EL LÍMITE DE TIEMPO AQUÍ
             });
 
             const duracion = Date.now() - inicioReloj;
@@ -540,7 +544,11 @@ app.all('*', async (req, res) => {
         } catch (error) {
             const statusError = error.response ? error.response.status : 500; 
             let msjResumido = error.message;
-            if(error.response && error.response.data && typeof error.response.data === 'object' && error.response.data.error) {
+            
+            // --- INTERCEPTOR DE TIMEOUT ---
+            if (error.code === 'ECONNABORTED' && error.message.includes('timeout')) {
+                msjResumido = `TIMEOUT: Obrero congelado. No respondió en ${limiteTiempo / 1000}s.`;
+            } else if(error.response && error.response.data && typeof error.response.data === 'object' && error.response.data.error) {
                 msjResumido = error.response.data.error; 
             } else if (error.response && error.response.data) {
                 msjResumido = typeof error.response.data === 'object' ? JSON.stringify(error.response.data) : error.response.data;
@@ -609,7 +617,7 @@ app.all('*', async (req, res) => {
 const PORT = process.env.PORT || 8080;
 app.listen(PORT, () => {
     console.log(`\n======================================`);
-    console.log(`🚀 COMANDANTE V4.5 (FAKE RESPONSE & QUEUE)`);
+    console.log(`🚀 COMANDANTE V4.6 (FAIL FAST & QUEUE)`);
     console.log(`📡 Puerto: ${PORT}`);
     console.log(`🤖 Obreros: ${OBREROS.length}`);
     console.log(`======================================\n`);
