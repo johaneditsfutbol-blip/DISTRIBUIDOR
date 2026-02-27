@@ -21,7 +21,7 @@ const OBREROS = [
     { id: 7, url: 'https://obrero-7-5-production.up.railway.app', carga: 0, fallos: 0, activo: true, cocinandoHasta: 0, buscandoServicios: false }
 ];
 
-const MAX_LOGS = 50;
+const MAX_LOGS = 1000;
 let HISTORIAL = [];
 
 // --- SISTEMA DE ENCOLAMIENTO ---
@@ -153,7 +153,7 @@ app.get('/status', (req, res) => {
                     </div>
                     <div>
                         <h1 class="text-2xl md:text-3xl font-bold text-white tracking-widest">COMANDANTE <span class="text-sky-400">V4.5</span></h1>
-                        <p class="text-sky-500/70 text-sm">CENTRO DE MANDO Y ENCOLAMIENTO ASÍNCRONO</p>
+                        <p class="text-sky-500/70 text-sm">CENTRO DE MANDO Y ENCOLAMIENTO</p>
                     </div>
                 </div>
                 <div class="flex flex-col items-end gap-2">
@@ -177,19 +177,73 @@ app.get('/status', (req, res) => {
             <div id="grid-obreros" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 mb-6"></div>
 
             <div class="glass-panel rounded-xl p-4 border-t-4 border-t-slate-500 bg-slate-900/80 flex-grow flex flex-col shadow-2xl">
-                <h2 class="text-lg font-bold text-white mb-3 flex items-center border-b border-slate-700 pb-2">
-                    <i class="fa-solid fa-terminal mr-2 text-slate-400"></i> Bitácora de Operaciones (Últimos 50 eventos)
-                </h2>
-                <div id="terminal-logs" class="overflow-y-auto flex-grow h-64 font-mono text-xs space-y-1.5 pr-2"></div>
+                <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-3 border-b border-slate-700 pb-3 gap-3">
+                    <h2 class="text-lg font-bold text-white flex items-center whitespace-nowrap">
+                        <i class="fa-solid fa-terminal mr-2 text-slate-400"></i> Auditoría
+                    </h2>
+                    
+                    <div class="flex flex-col sm:flex-row gap-2 w-full md:w-auto">
+                        <div class="relative w-full sm:w-64">
+                            <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                                <i class="fa-solid fa-search text-slate-500 text-xs"></i>
+                            </div>
+                            <input type="text" id="input-busqueda" placeholder="Buscar ID Cliente, REQ o mensaje..." class="bg-slate-950 border border-slate-700 text-slate-300 text-xs rounded-lg focus:ring-sky-500 focus:border-sky-500 block w-full pl-8 p-2 placeholder-slate-600 outline-none transition-all">
+                        </div>
+                        <select id="filtro-tipo" class="bg-slate-950 border border-slate-700 text-slate-300 text-xs rounded-lg focus:ring-sky-500 focus:border-sky-500 block w-full sm:w-32 p-2 outline-none cursor-pointer">
+                            <option value="ALL">Todos los Tipos</option>
+                            <option value="ERROR">❌ Errores</option>
+                            <option value="EXITO">✅ Éxitos</option>
+                            <option value="COLA">⏳ En Cola</option>
+                            <option value="ALERTA">🚨 Alertas</option>
+                            <option value="NUEVA">📥 Entrantes</option>
+                            <option value="INFO">ℹ️ Info</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div id="terminal-logs" class="overflow-y-auto flex-grow h-72 font-mono text-xs space-y-1.5 pr-2 mb-3"></div>
+
+                <div class="flex justify-between items-center text-xs text-slate-400 border-t border-slate-700 pt-3 mt-auto">
+                    <span id="txt-resultados">Mostrando 0 resultados</span>
+                    <div class="flex items-center gap-1">
+                        <button id="btn-prev" class="px-3 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded border border-slate-700 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"><i class="fa-solid fa-chevron-left"></i></button>
+                        <span id="txt-paginacion" class="px-3 py-1 font-bold text-white bg-slate-950 rounded border border-slate-800">1 / 1</span>
+                        <button id="btn-next" class="px-3 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded border border-slate-700 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"><i class="fa-solid fa-chevron-right"></i></button>
+                    </div>
+                </div>
             </div>
         </div>
 
         <script>
+            // --- ESTADO LOCAL DEL DASHBOARD ---
+            let historialGlobal = [];
+            let paginaActual = 1;
+            const LOGS_POR_PAGINA = 50;
+
             const grid = document.getElementById('grid-obreros');
             const terminal = document.getElementById('terminal-logs');
             const txtActualizacion = document.getElementById('txt-actualizacion');
             const txtCola = document.getElementById('txt-cola');
             const badgeCola = document.getElementById('badge-cola');
+            
+            // Elementos de UI de filtrado y paginación
+            const inputBusqueda = document.getElementById('input-busqueda');
+            const filtroTipo = document.getElementById('filtro-tipo');
+            const btnPrev = document.getElementById('btn-prev');
+            const btnNext = document.getElementById('btn-next');
+            const txtPaginacion = document.getElementById('txt-paginacion');
+            const txtResultados = document.getElementById('txt-resultados');
+
+            // --- LISTENERS DE FILTROS ---
+            inputBusqueda.addEventListener('input', () => { paginaActual = 1; renderizarTerminal(); });
+            filtroTipo.addEventListener('change', () => { paginaActual = 1; renderizarTerminal(); });
+            
+            btnPrev.addEventListener('click', () => { 
+                if (paginaActual > 1) { paginaActual--; renderizarTerminal(); } 
+            });
+            btnNext.addEventListener('click', () => { 
+                paginaActual++; renderizarTerminal(); 
+            });
 
             const formatearHora = (ms) => {
                 const d = new Date(ms);
@@ -202,7 +256,10 @@ app.get('/status', (req, res) => {
                     const data = await respuesta.json(); 
                     
                     renderizarObreros(data.obreros);
-                    renderizarTerminal(data.historial);
+                    
+                    // Actualizamos la base de datos local y re-renderizamos sin perder la página
+                    historialGlobal = data.historial;
+                    renderizarTerminal();
                     
                     txtCola.innerText = 'COLA: ' + data.encolados;
                     if (data.encolados > 0) {
@@ -219,7 +276,7 @@ app.get('/status', (req, res) => {
                     txtActualizacion.innerText = \`Última lectura: \${ahora.toLocaleTimeString('es-VE', {hour12: false})}.\${ahora.getMilliseconds()}\`;
                     txtActualizacion.classList.remove('text-red-500');
                 } catch (error) {
-                    txtActualizacion.innerText = "❌ ERROR DE CONEXIÓN CON EL COMANDANTE";
+                    txtActualizacion.innerText = "❌ ERROR DE CONEXIÓN";
                     txtActualizacion.classList.add('text-red-500');
                 }
             }
@@ -276,14 +333,41 @@ app.get('/status', (req, res) => {
                 grid.innerHTML = htmlTemp;
             }
 
-            function renderizarTerminal(historial) {
+            function renderizarTerminal() {
+                // 1. Obtener valores de filtros
+                const busqueda = inputBusqueda.value.toLowerCase().trim();
+                const tipoFiltrado = filtroTipo.value;
+
+                // 2. Aplicar Filtros al historial global
+                let logsFiltrados = historialGlobal.filter(log => {
+                    const coincideTipo = tipoFiltrado === 'ALL' || log.tipo === tipoFiltrado;
+                    const textoCompleto = \`\${log.reqId} \${log.mensaje} \${log.obreroId}\`.toLowerCase();
+                    const coincideBusqueda = busqueda === '' || textoCompleto.includes(busqueda);
+                    return coincideTipo && coincideBusqueda;
+                });
+
+                // 3. Lógica de Paginación
+                const totalPaginas = Math.max(1, Math.ceil(logsFiltrados.length / LOGS_POR_PAGINA));
+                if (paginaActual > totalPaginas) paginaActual = totalPaginas;
+
+                const indexInicio = (paginaActual - 1) * LOGS_POR_PAGINA;
+                const indexFin = indexInicio + LOGS_POR_PAGINA;
+                const logsPaginados = logsFiltrados.slice(indexInicio, indexFin);
+
+                // 4. Actualizar UI de Controles
+                txtPaginacion.innerText = \`\${paginaActual} / \${totalPaginas}\`;
+                txtResultados.innerText = \`Total: \${logsFiltrados.length} eventos (Historial: \${historialGlobal.length})\`;
+                btnPrev.disabled = paginaActual === 1;
+                btnNext.disabled = paginaActual === totalPaginas;
+
+                // 5. Renderizar Logs
                 let htmlTemp = '';
-                if(historial.length === 0) {
-                    terminal.innerHTML = '<div class="text-slate-500 italic">Esperando telemetría...</div>';
+                if(logsPaginados.length === 0) {
+                    terminal.innerHTML = '<div class="text-slate-500 italic mt-4 text-center">No se encontraron registros para esta búsqueda...</div>';
                     return;
                 }
 
-                historial.forEach(log => {
+                logsPaginados.forEach(log => {
                     let colorBase = 'text-slate-300';
                     let bgBadge = 'bg-slate-800 text-slate-400 border-slate-600';
                     let icono = 'fa-info-circle';
@@ -298,11 +382,11 @@ app.get('/status', (req, res) => {
                     const obreroTag = log.obreroId !== 'SYS' ? \`<span class="text-sky-400 font-bold ml-2">[OB-\${log.obreroId}]</span>\` : '<span class="text-purple-400 font-bold ml-2">[SYS]</span>';
 
                     htmlTemp += \`
-                    <div class="flex items-start gap-2 p-1 hover:bg-slate-800/50 rounded transition-colors border-b border-slate-800/50 pb-1.5">
-                        <div class="text-slate-500 w-24 shrink-0">\${formatearHora(log.tiempo)}</div>
-                        <div class="w-16 shrink-0 text-center border \${bgBadge} rounded text-[9px] font-bold py-0.5"><i class="fa-solid \${icono}"></i> \${log.tipo}</div>
-                        <div class="text-slate-400 w-12 shrink-0 text-center">[\${log.reqId}]</div>
-                        <div class="\${colorBase} break-all">\${log.mensaje} \${obreroTag}\${duracionBadge}</div>
+                    <div class="flex items-start gap-2 p-1.5 hover:bg-slate-800/60 rounded transition-colors border-b border-slate-800/50 pb-2">
+                        <div class="text-slate-500 w-24 shrink-0 mt-0.5">\${formatearHora(log.tiempo)}</div>
+                        <div class="w-20 shrink-0 text-center border \${bgBadge} rounded text-[9px] font-bold py-0.5 mt-0.5"><i class="fa-solid \${icono}"></i> \${log.tipo}</div>
+                        <div class="text-slate-400 w-12 shrink-0 text-center mt-0.5">[\${log.reqId}]</div>
+                        <div class="\${colorBase} break-all flex-grow leading-tight">\${log.mensaje} \${obreroTag}\${duracionBadge}</div>
                     </div>
                     \`;
                 });
