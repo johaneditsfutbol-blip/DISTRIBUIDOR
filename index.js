@@ -85,7 +85,7 @@ app.post('/api/tactico/orden66/:id', (req, res) => {
         obrero.activo = true;
         obrero.fallos = 0;
         agregarLog('SYS', 'INFO', 'Obrero resucitado tras purga manual.', id);
-    }, 30000);
+    }, 40000);
 
     res.json({ success: true, message: "Misil disparado." });
 });
@@ -412,9 +412,9 @@ app.all('*', async (req, res) => {
                     if(obj) {
                         obj.activo = true;
                         obj.fallos = 0;
-                        agregarLog('SYS', 'INFO', `Fin de Cuarentena (30s). Obrero resucitado.`, idParaRevivir);
+                        agregarLog('SYS', 'INFO', `Fin de Cuarentena (40s). Obrero resucitado.`, idParaRevivir);
                     }
-                }, 30000); 
+                }, 40000); 
             }
             errorFinal = msjResumido;
 
