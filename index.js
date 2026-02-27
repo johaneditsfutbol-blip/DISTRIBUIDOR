@@ -118,7 +118,7 @@ app.post('/api/tactico/revivir/:id', (req, res) => {
 });
 
 // ============================================================================
-// 3. DASHBOARD VISUAL (HTML/JS)
+// 3. DASHBOARD VISUAL (HTML/JS) - V5 PREMIUM COMMAND CENTER
 // ============================================================================
 
 app.get('/status', (req, res) => {
@@ -128,87 +128,143 @@ app.get('/status', (req, res) => {
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Comandante - C2</title>
+        <title>CX-NEXUS | Command Center</title>
         <script src="https://cdn.tailwindcss.com"></script>
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+        <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@300;400;500;600&family=Rajdhani:wght@400;500;600;700&display=swap" rel="stylesheet">
+        
+        <script>
+            tailwind.config = {
+                theme: {
+                    extend: {
+                        colors: {
+                            gold: { 400: '#F3E5AB', 500: '#D4AF37', 600: '#AA8C2C', 900: '#4A3D13' },
+                            dark: { 800: '#121212', 900: '#0A0A0A', 950: '#050505' }
+                        },
+                        fontFamily: {
+                            hud: ['"Rajdhani"', 'sans-serif'],
+                            mono: ['"Fira Code"', 'monospace']
+                        }
+                    }
+                }
+            }
+        </script>
         <style>
-            body { background-color: #0b1120; color: #e2e8f0; font-family: 'Consolas', 'Courier New', monospace; }
-            .glass-panel { background: rgba(30, 41, 59, 0.6); backdrop-filter: blur(8px); border: 1px solid rgba(56, 189, 248, 0.2); }
-            .neon-text { text-shadow: 0 0 8px rgba(56, 189, 248, 0.6); }
-            .scan-line { width: 100%; height: 2px; background: rgba(56, 189, 248, 0.3); position: absolute; top: 0; animation: scan 3s linear infinite; }
+            body { background-color: #050505; color: #a1a1aa; overflow-x: hidden; }
+            .hud-panel { 
+                background: linear-gradient(145deg, #0a0a0a 0%, #050505 100%);
+                border: 1px solid #222;
+                box-shadow: inset 0 0 20px rgba(0,0,0,0.5);
+                position: relative;
+            }
+            .hud-panel::before {
+                content: ''; position: absolute; top: -1px; left: -1px; width: 20px; height: 20px;
+                border-top: 1px solid #D4AF37; border-left: 1px solid #D4AF37; opacity: 0.7;
+            }
+            .hud-panel::after {
+                content: ''; position: absolute; bottom: -1px; right: -1px; width: 20px; height: 20px;
+                border-bottom: 1px solid #D4AF37; border-right: 1px solid #D4AF37; opacity: 0.7;
+            }
+            .gold-glow { text-shadow: 0 0 10px rgba(212, 175, 55, 0.4); }
+            .border-glow { box-shadow: 0 0 15px rgba(212, 175, 55, 0.15); border-color: rgba(212, 175, 55, 0.4); }
+            
+            /* Animación Radar Base */
+            .radar-line { width: 100%; height: 1px; background: linear-gradient(90deg, transparent, rgba(212,175,55,0.3), transparent); position: absolute; top: 0; animation: scan 4s linear infinite; pointer-events: none;}
             @keyframes scan { 0% { top: 0; opacity: 0; } 10% { opacity: 1; } 90% { opacity: 1; } 100% { top: 100%; opacity: 0; } }
-            ::-webkit-scrollbar { width: 6px; }
-            ::-webkit-scrollbar-track { background: #0b1120; }
-            ::-webkit-scrollbar-thumb { background: #38bdf8; border-radius: 3px; }
+            
+            /* Custom Scrollbar Premium */
+            ::-webkit-scrollbar { width: 4px; }
+            ::-webkit-scrollbar-track { background: #050505; }
+            ::-webkit-scrollbar-thumb { background: #333; }
+            ::-webkit-scrollbar-thumb:hover { background: #D4AF37; }
+
+            /* Efecto Micro-Data */
+            .micro-data { font-size: 0.55rem; letter-spacing: 0.1em; color: #555; text-transform: uppercase; }
         </style>
     </head>
-    <body class="p-4 md:p-8 min-h-screen relative overflow-x-hidden flex flex-col">
-        <div class="fixed inset-0 pointer-events-none z-0"><div class="scan-line"></div></div>
+    <body class="p-4 md:p-6 min-h-screen relative flex flex-col font-mono selection:bg-gold-500 selection:text-black">
+        <div class="fixed inset-0 z-0 pointer-events-none opacity-20" style="background-image: radial-gradient(#333 1px, transparent 1px); background-size: 30px 30px;"></div>
+        <div class="radar-line z-0"></div>
 
         <div class="max-w-7xl mx-auto w-full relative z-10 flex-grow flex flex-col">
-            <header class="flex flex-col md:flex-row justify-between items-center mb-6 pb-4 border-b border-sky-900/50">
-                <div class="flex items-center gap-4 mb-4 md:mb-0">
-                    <div class="bg-sky-500/20 p-3 rounded-lg border border-sky-500/50">
-                        <i class="fa-solid fa-satellite-dish text-3xl text-sky-400 neon-text"></i>
+            <header class="flex flex-col md:flex-row justify-between items-end mb-6 pb-4 border-b border-dark-800">
+                <div class="flex items-center gap-4 w-full md:w-auto mb-4 md:mb-0">
+                    <div class="relative w-12 h-12 flex items-center justify-center border border-gold-500/40 bg-gold-900/20">
+                        <i class="fa-solid fa-layer-group text-2xl text-gold-500 animate-pulse"></i>
+                        <div class="absolute -top-1 -right-1 w-2 h-2 bg-gold-500"></div>
                     </div>
                     <div>
-                        <h1 class="text-2xl md:text-3xl font-bold text-white tracking-widest">COMANDANTE <span class="text-sky-400">V4.5</span></h1>
-                        <p class="text-sky-500/70 text-sm">CENTRO DE MANDO Y ENCOLAMIENTO</p>
+                        <h1 class="text-3xl font-bold text-white tracking-widest font-hud gold-glow uppercase">NEXUS<span class="text-gold-500 font-light">_CORE</span></h1>
+                        <div class="flex gap-3 text-[10px] tracking-widest text-gold-600 font-hud mt-1">
+                            <span>SYS_ID: OP-77X</span>
+                            <span>|</span>
+                            <span>NODE: RAILWAY_PRD</span>
+                        </div>
                     </div>
                 </div>
-                <div class="flex flex-col items-end gap-2">
-                    <div class="flex items-center gap-3">
-                        <div id="badge-cola" class="flex items-center gap-2 bg-indigo-900/40 px-3 py-1.5 rounded-full border border-indigo-700/50 transition-colors">
-                            <i class="fa-solid fa-users text-indigo-400"></i>
-                            <span id="txt-cola" class="text-xs font-bold tracking-wider text-indigo-400">COLA: 0</span>
+
+                <div class="flex flex-col items-end gap-2 w-full md:w-auto">
+                    <div class="flex items-center gap-4 font-hud text-xs tracking-widest">
+                        <div id="badge-cola" class="flex items-center gap-2 border border-dark-800 bg-dark-900 px-3 py-1 transition-all duration-300">
+                            <i class="fa-solid fa-server text-gray-500" id="icon-cola"></i>
+                            <span id="txt-cola" class="text-gray-500">QUEUE: 0</span>
                         </div>
-                        <div class="flex items-center gap-3 bg-slate-800/80 px-4 py-2 rounded-full border border-slate-700">
-                            <span class="relative flex h-3 w-3">
-                                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                                <span class="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
+                        <div class="flex items-center gap-2 border border-gold-500/30 bg-gold-900/10 px-3 py-1">
+                            <span class="relative flex h-2 w-2">
+                                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-gold-400 opacity-75"></span>
+                                <span class="relative inline-flex rounded-full h-2 w-2 bg-gold-500"></span>
                             </span>
-                            <span class="text-sm font-semibold tracking-wider text-green-400">ENLACE ACTIVO</span>
+                            <span class="text-gold-400 font-semibold">UPLINK STABLE</span>
                         </div>
                     </div>
-                    <span id="txt-actualizacion" class="text-xs text-slate-500 mt-2">Última lectura: Calculando...</span>
+                    <div class="flex gap-2 text-[9px] text-gray-600 tracking-wider">
+                        <span>LATENCY: <span class="text-green-500">12ms</span></span>
+                        <span id="txt-actualizacion">SYNC: 00:00:00</span>
+                    </div>
                 </div>
             </header>
             
-            <div id="grid-obreros" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 mb-6"></div>
+            <div id="grid-obreros" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mb-6"></div>
 
-            <div class="glass-panel rounded-xl p-4 border-t-4 border-t-slate-500 bg-slate-900/80 flex-grow flex flex-col shadow-2xl">
-                <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-3 border-b border-slate-700 pb-3 gap-3">
-                    <h2 class="text-lg font-bold text-white flex items-center whitespace-nowrap">
-                        <i class="fa-solid fa-terminal mr-2 text-slate-400"></i> Auditoría
-                    </h2>
+            <div class="hud-panel p-4 flex-grow flex flex-col mt-2">
+                <div class="flex flex-col md:flex-row justify-between items-start md:items-end mb-4 pb-3 border-b border-dark-800 gap-4">
+                    <div>
+                        <h2 class="text-xl font-bold text-white font-hud tracking-widest flex items-center">
+                            <i class="fa-solid fa-terminal text-gold-500 mr-2 text-sm"></i> TELEMETRY_LOG
+                        </h2>
+                        <span class="micro-data">MAX_BUFFER: 1000 STRINGS</span>
+                    </div>
                     
-                    <div class="flex flex-col sm:flex-row gap-2 w-full md:w-auto">
+                    <div class="flex flex-col sm:flex-row gap-2 w-full md:w-auto font-hud text-sm">
                         <div class="relative w-full sm:w-64">
                             <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-                                <i class="fa-solid fa-search text-slate-500 text-xs"></i>
+                                <i class="fa-solid fa-magnifying-glass text-gold-600"></i>
                             </div>
-                            <input type="text" id="input-busqueda" placeholder="Buscar ID Cliente, REQ o mensaje..." class="bg-slate-950 border border-slate-700 text-slate-300 text-xs rounded-lg focus:ring-sky-500 focus:border-sky-500 block w-full pl-8 p-2 placeholder-slate-600 outline-none transition-all">
+                            <input type="text" id="input-busqueda" placeholder="QUERY ID / REQ / TRACE..." class="bg-dark-900 border border-dark-800 text-gray-300 placeholder-gray-700 block w-full pl-8 p-1.5 focus:border-gold-500 outline-none transition-colors tracking-wider">
                         </div>
-                        <select id="filtro-tipo" class="bg-slate-950 border border-slate-700 text-slate-300 text-xs rounded-lg focus:ring-sky-500 focus:border-sky-500 block w-full sm:w-32 p-2 outline-none cursor-pointer">
-                            <option value="ALL">Todos los Tipos</option>
-                            <option value="ERROR">❌ Errores</option>
-                            <option value="EXITO">✅ Éxitos</option>
-                            <option value="COLA">⏳ En Cola</option>
-                            <option value="ALERTA">🚨 Alertas</option>
-                            <option value="NUEVA">📥 Entrantes</option>
-                            <option value="INFO">ℹ️ Info</option>
+                        <select id="filtro-tipo" class="bg-dark-900 border border-dark-800 text-gold-500 block w-full sm:w-32 p-1.5 outline-none cursor-pointer tracking-wider font-semibold">
+                            <option value="ALL">ALL_EVENTS</option>
+                            <option value="ERROR">ERRORS</option>
+                            <option value="EXITO">SUCCESS</option>
+                            <option value="COLA">QUEUED</option>
+                            <option value="ALERTA">ALERTS</option>
+                            <option value="NUEVA">INBOUND</option>
+                            <option value="INFO">INFO_TRACE</option>
                         </select>
                     </div>
                 </div>
 
-                <div id="terminal-logs" class="overflow-y-auto flex-grow h-72 font-mono text-xs space-y-1.5 pr-2 mb-3"></div>
+                <div id="terminal-logs" class="overflow-y-auto flex-grow h-[350px] space-y-1 pr-2 mb-3"></div>
 
-                <div class="flex justify-between items-center text-xs text-slate-400 border-t border-slate-700 pt-3 mt-auto">
-                    <span id="txt-resultados">Mostrando 0 resultados</span>
+                <div class="flex justify-between items-center border-t border-dark-800 pt-3 mt-auto font-hud tracking-widest uppercase">
+                    <div class="flex flex-col">
+                        <span id="txt-resultados" class="text-gold-500 text-xs font-bold">MATCHES: 0</span>
+                        <span class="micro-data text-gray-600">DB_SIZE: <span id="txt-dbsize">0</span></span>
+                    </div>
                     <div class="flex items-center gap-1">
-                        <button id="btn-prev" class="px-3 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded border border-slate-700 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"><i class="fa-solid fa-chevron-left"></i></button>
-                        <span id="txt-paginacion" class="px-3 py-1 font-bold text-white bg-slate-950 rounded border border-slate-800">1 / 1</span>
-                        <button id="btn-next" class="px-3 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded border border-slate-700 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"><i class="fa-solid fa-chevron-right"></i></button>
+                        <button id="btn-prev" class="w-8 h-6 bg-dark-900 text-gold-600 border border-dark-800 hover:border-gold-500 hover:text-gold-400 disabled:opacity-20 disabled:cursor-not-allowed transition-all"><i class="fa-solid fa-caret-left"></i></button>
+                        <span id="txt-paginacion" class="px-4 text-xs font-bold text-white bg-black border border-dark-800 h-6 flex items-center">1 / 1</span>
+                        <button id="btn-next" class="w-8 h-6 bg-dark-900 text-gold-600 border border-dark-800 hover:border-gold-500 hover:text-gold-400 disabled:opacity-20 disabled:cursor-not-allowed transition-all"><i class="fa-solid fa-caret-right"></i></button>
                     </div>
                 </div>
             </div>
@@ -224,30 +280,25 @@ app.get('/status', (req, res) => {
             const terminal = document.getElementById('terminal-logs');
             const txtActualizacion = document.getElementById('txt-actualizacion');
             const txtCola = document.getElementById('txt-cola');
+            const iconCola = document.getElementById('icon-cola');
             const badgeCola = document.getElementById('badge-cola');
             
-            // Elementos de UI de filtrado y paginación
             const inputBusqueda = document.getElementById('input-busqueda');
             const filtroTipo = document.getElementById('filtro-tipo');
             const btnPrev = document.getElementById('btn-prev');
             const btnNext = document.getElementById('btn-next');
             const txtPaginacion = document.getElementById('txt-paginacion');
             const txtResultados = document.getElementById('txt-resultados');
+            const txtDbSize = document.getElementById('txt-dbsize');
 
-            // --- LISTENERS DE FILTROS ---
             inputBusqueda.addEventListener('input', () => { paginaActual = 1; renderizarTerminal(); });
             filtroTipo.addEventListener('change', () => { paginaActual = 1; renderizarTerminal(); });
-            
-            btnPrev.addEventListener('click', () => { 
-                if (paginaActual > 1) { paginaActual--; renderizarTerminal(); } 
-            });
-            btnNext.addEventListener('click', () => { 
-                paginaActual++; renderizarTerminal(); 
-            });
+            btnPrev.addEventListener('click', () => { if (paginaActual > 1) { paginaActual--; renderizarTerminal(); } });
+            btnNext.addEventListener('click', () => { paginaActual++; renderizarTerminal(); });
 
             const formatearHora = (ms) => {
                 const d = new Date(ms);
-                return d.toLocaleTimeString('es-VE', { hour12: false }) + '.' + String(d.getMilliseconds()).padStart(3, '0');
+                return d.toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute:'2-digit', second:'2-digit' }) + '.' + String(d.getMilliseconds()).padStart(3, '0');
             };
 
             async function escanearEscuadron() {
@@ -257,27 +308,27 @@ app.get('/status', (req, res) => {
                     
                     renderizarObreros(data.obreros);
                     
-                    // Actualizamos la base de datos local y re-renderizamos sin perder la página
                     historialGlobal = data.historial;
                     renderizarTerminal();
                     
-                    txtCola.innerText = 'COLA: ' + data.encolados;
+                    // UI Cola Premium
+                    txtCola.innerText = 'QUEUE: ' + data.encolados.toString().padStart(2, '0');
                     if (data.encolados > 0) {
-                        badgeCola.classList.replace('bg-indigo-900/40', 'bg-indigo-600/80');
-                        badgeCola.classList.replace('border-indigo-700/50', 'border-indigo-400');
-                        txtCola.classList.replace('text-indigo-400', 'text-white');
+                        badgeCola.className = 'flex items-center gap-2 border border-gold-500/50 bg-gold-900/20 px-3 py-1 transition-all duration-300 border-glow';
+                        iconCola.className = 'fa-solid fa-network-wired text-gold-400 animate-pulse';
+                        txtCola.className = 'text-gold-400 font-bold';
                     } else {
-                        badgeCola.classList.replace('bg-indigo-600/80', 'bg-indigo-900/40');
-                        badgeCola.classList.replace('border-indigo-400', 'border-indigo-700/50');
-                        txtCola.classList.replace('text-white', 'text-indigo-400');
+                        badgeCola.className = 'flex items-center gap-2 border border-dark-800 bg-dark-900 px-3 py-1 transition-all duration-300';
+                        iconCola.className = 'fa-solid fa-server text-gray-600';
+                        txtCola.className = 'text-gray-600';
                     }
                     
                     const ahora = new Date();
-                    txtActualizacion.innerText = \`Última lectura: \${ahora.toLocaleTimeString('es-VE', {hour12: false})}.\${ahora.getMilliseconds()}\`;
-                    txtActualizacion.classList.remove('text-red-500');
+                    txtActualizacion.innerText = \`SYNC: \${ahora.toLocaleTimeString('en-US', {hour12: false})}\`;
+                    txtActualizacion.classList.replace('text-red-500', 'text-gray-600');
                 } catch (error) {
-                    txtActualizacion.innerText = "❌ ERROR DE CONEXIÓN";
-                    txtActualizacion.classList.add('text-red-500');
+                    txtActualizacion.innerText = "LINK_LOST";
+                    txtActualizacion.classList.replace('text-gray-600', 'text-red-500');
                 }
             }
 
@@ -290,41 +341,54 @@ app.get('/status', (req, res) => {
                     const isCocinando = o.cocinandoHasta > tiempoActual;
                     const segCoccion = isCocinando ? Math.ceil((o.cocinandoHasta - tiempoActual) / 1000) : 0;
                     
-                    let colorFondo = isVivo ? 'bg-slate-800/40' : 'bg-red-950/40';
-                    let badgeEstado = isVivo 
-                        ? \`<span class="bg-green-500/20 text-green-400 px-2 py-1 rounded text-[10px] border border-green-500/30"><i class="fa-solid fa-check mr-1"></i>ACTIVO</span>\`
-                        : \`<span class="bg-red-500/20 text-red-400 px-2 py-1 rounded text-[10px] border border-red-500/30 animate-pulse"><i class="fa-solid fa-skull mr-1"></i>CUARENTENA</span>\`;
+                    // Estilos base de la tarjeta
+                    const bordeEstado = isVivo ? 'border-dark-800 hover:border-gold-500/30' : 'border-red-900/50 border-glow';
+                    
+                    // Badges Técnicos
+                    let statusIcon = isVivo 
+                        ? \`<i class="fa-solid fa-check text-green-500 text-[10px]"></i> <span class="text-green-500">OPR_RDY</span>\`
+                        : \`<i class="fa-solid fa-skull text-red-500 text-[10px] animate-pulse"></i> <span class="text-red-500">QUARANTINE</span>\`;
 
-                    let badgesOp = '';
-                    if (isCocinando) badgesOp += \`<span class="bg-orange-500/20 text-orange-400 px-2 py-1 rounded text-[10px] border border-orange-500/30"><i class="fa-solid fa-fire mr-1"></i>\${segCoccion}s</span> \`;
-                    if (o.buscandoServicios) badgesOp += \`<span class="bg-blue-500/20 text-blue-400 px-2 py-1 rounded text-[10px] border border-blue-500/30"><i class="fa-solid fa-search mr-1"></i>SRV</span>\`;
+                    let opsBadges = '';
+                    if (isCocinando) opsBadges += \`<div class="border border-amber-500/30 bg-amber-900/10 text-amber-500 px-1.5 py-0.5"><i class="fa-solid fa-fire animate-pulse mr-1"></i>\${segCoccion}s</div>\`;
+                    if (o.buscandoServicios) opsBadges += \`<div class="border border-sky-500/30 bg-sky-900/10 text-sky-400 px-1.5 py-0.5"><i class="fa-solid fa-satellite-dish animate-pulse mr-1"></i>SRV</div>\`;
 
                     const porcentajeCarga = Math.min((o.carga / 10) * 100, 100);
-                    let colorCarga = o.carga > 5 ? 'bg-red-500' : (o.carga > 2 ? 'bg-yellow-500' : 'bg-green-500');
+                    let colorBarra = o.carga > 5 ? 'bg-red-500' : (o.carga > 2 ? 'bg-amber-500' : 'bg-gold-500');
 
                     htmlTemp += \`
-                    <div class="glass-panel rounded-lg p-4 border-t-2 \${isVivo ? 'border-t-green-500' : 'border-t-red-600'} flex flex-col \${colorFondo} transition-all duration-300">
-                        <div class="flex justify-between items-center mb-2">
-                            <h2 class="text-lg font-bold text-white">OBRERO-\${o.id}</h2>
-                            <div class="text-xl font-black \${o.fallos > 0 ? 'text-red-400' : 'text-slate-600'}" title="Fallos consecutivos">\${o.fallos}</div>
-                        </div>
-                        <div class="flex gap-1 flex-wrap mb-3">\${badgeEstado}\${badgesOp}</div>
-
-                        <div class="mb-3 bg-slate-900/80 p-2 rounded border border-slate-700/50">
-                            <div class="flex justify-between text-[10px] text-slate-400 mb-1">
-                                <span>Carga: \${o.carga}</span>
+                    <div class="hud-panel p-3 border \${bordeEstado} transition-colors flex flex-col justify-between min-h-[140px]">
+                        <div class="flex justify-between items-start mb-2">
+                            <div>
+                                <h2 class="text-lg font-bold text-gray-200 font-hud tracking-widest leading-none">WK_0\${o.id}</h2>
+                                <div class="font-hud tracking-widest text-[9px] mt-1 \${isVivo ? '' : 'gold-glow'}">\${statusIcon}</div>
                             </div>
-                            <div class="w-full bg-slate-800 rounded-full h-1 overflow-hidden">
-                                <div class="\${colorCarga} h-1 rounded-full transition-all duration-500" style="width: \${porcentajeCarga}%"></div>
+                            <div class="text-right">
+                                <div class="text-2xl font-light font-hud leading-none \${o.fallos > 0 ? 'text-red-500' : 'text-gray-700'}">\${o.fallos.toString().padStart(2, '0')}</div>
+                                <div class="micro-data">ERRORS</div>
                             </div>
                         </div>
 
-                        <div class="grid grid-cols-2 gap-2 mt-auto">
-                            <button onclick="ejecutarOrden(\${o.id})" class="bg-red-900/40 hover:bg-red-600/60 text-red-400 hover:text-white border border-red-800/50 py-1.5 rounded text-[10px] font-bold transition-colors">
-                                <i class="fa-solid fa-radiation"></i> PURGAR
+                        <div class="flex gap-1 mb-2 text-[8px] font-hud tracking-widest uppercase h-4">
+                            \${opsBadges}
+                        </div>
+
+                        <div class="mb-3">
+                            <div class="flex justify-between font-hud text-[9px] tracking-widest text-gray-500 mb-1">
+                                <span>LOAD_BAL</span>
+                                <span class="text-gray-300">\${o.carga} REQ</span>
+                            </div>
+                            <div class="w-full bg-dark-900 border border-dark-800 h-1">
+                                <div class="\${colorBarra} h-full transition-all duration-500" style="width: \${porcentajeCarga}%"></div>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-2 mt-auto font-hud text-[10px] tracking-widest uppercase">
+                            <button onclick="ejecutarOrden(\${o.id})" class="bg-dark-900 text-gray-500 border border-dark-800 hover:border-red-500 hover:text-red-500 py-1 transition-colors flex justify-center items-center gap-1 group">
+                                <i class="fa-solid fa-radiation group-hover:animate-spin"></i> PURGE
                             </button>
-                            <button onclick="revivir(\${o.id})" class="bg-emerald-900/40 hover:bg-emerald-600/60 text-emerald-400 hover:text-white border border-emerald-800/50 py-1.5 rounded text-[10px] font-bold transition-colors">
-                                <i class="fa-solid fa-bolt"></i> REVIVIR
+                            <button onclick="revivir(\${o.id})" class="bg-dark-900 text-gray-500 border border-dark-800 hover:border-gold-500 hover:text-gold-400 py-1 transition-colors flex justify-center items-center gap-1">
+                                <i class="fa-solid fa-bolt"></i> FORCE_UP
                             </button>
                         </div>
                     </div>
@@ -334,11 +398,9 @@ app.get('/status', (req, res) => {
             }
 
             function renderizarTerminal() {
-                // 1. Obtener valores de filtros
                 const busqueda = inputBusqueda.value.toLowerCase().trim();
                 const tipoFiltrado = filtroTipo.value;
 
-                // 2. Aplicar Filtros al historial global
                 let logsFiltrados = historialGlobal.filter(log => {
                     const coincideTipo = tipoFiltrado === 'ALL' || log.tipo === tipoFiltrado;
                     const textoCompleto = \`\${log.reqId} \${log.mensaje} \${log.obreroId}\`.toLowerCase();
@@ -346,7 +408,6 @@ app.get('/status', (req, res) => {
                     return coincideTipo && coincideBusqueda;
                 });
 
-                // 3. Lógica de Paginación
                 const totalPaginas = Math.max(1, Math.ceil(logsFiltrados.length / LOGS_POR_PAGINA));
                 if (paginaActual > totalPaginas) paginaActual = totalPaginas;
 
@@ -354,39 +415,41 @@ app.get('/status', (req, res) => {
                 const indexFin = indexInicio + LOGS_POR_PAGINA;
                 const logsPaginados = logsFiltrados.slice(indexInicio, indexFin);
 
-                // 4. Actualizar UI de Controles
-                txtPaginacion.innerText = \`\${paginaActual} / \${totalPaginas}\`;
-                txtResultados.innerText = \`Total: \${logsFiltrados.length} eventos (Historial: \${historialGlobal.length})\`;
+                txtPaginacion.innerText = \`\${paginaActual.toString().padStart(2, '0')} / \${totalPaginas.toString().padStart(2, '0')}\`;
+                txtResultados.innerText = \`MATCHES: \${logsFiltrados.length.toString().padStart(4, '0')}\`;
+                txtDbSize.innerText = historialGlobal.length.toString().padStart(4, '0');
+                
                 btnPrev.disabled = paginaActual === 1;
                 btnNext.disabled = paginaActual === totalPaginas;
 
-                // 5. Renderizar Logs
                 let htmlTemp = '';
                 if(logsPaginados.length === 0) {
-                    terminal.innerHTML = '<div class="text-slate-500 italic mt-4 text-center">No se encontraron registros para esta búsqueda...</div>';
+                    terminal.innerHTML = '<div class="text-gray-700 italic mt-4 text-center font-hud tracking-widest text-sm">NO_DATA_FOUND // AWAITING_INPUT</div>';
                     return;
                 }
 
                 logsPaginados.forEach(log => {
-                    let colorBase = 'text-slate-300';
-                    let bgBadge = 'bg-slate-800 text-slate-400 border-slate-600';
-                    let icono = 'fa-info-circle';
+                    let colorBase = 'text-gray-400';
+                    let bgBadge = 'text-gray-500';
+                    let iconClass = 'fa-solid fa-microchip';
 
-                    if (log.tipo === 'NUEVA') { bgBadge = 'bg-blue-900/50 text-blue-400 border-blue-700'; icono = 'fa-arrow-right-to-bracket'; }
-                    if (log.tipo === 'EXITO') { bgBadge = 'bg-green-900/50 text-green-400 border-green-700'; icono = 'fa-check'; colorBase = 'text-green-100'; }
-                    if (log.tipo === 'ERROR') { bgBadge = 'bg-red-900/50 text-red-400 border-red-700'; icono = 'fa-xmark'; colorBase = 'text-red-200'; }
-                    if (log.tipo === 'ALERTA') { bgBadge = 'bg-orange-900/50 text-orange-400 border-orange-700'; icono = 'fa-triangle-exclamation'; colorBase = 'text-orange-200'; }
-                    if (log.tipo === 'COLA') { bgBadge = 'bg-indigo-900/50 text-indigo-400 border-indigo-700'; icono = 'fa-hourglass-half'; colorBase = 'text-indigo-200'; }
-                    
-                    const duracionBadge = log.duracion ? \`<span class="text-slate-500 ml-2">(\${log.duracion}ms)</span>\` : '';
-                    const obreroTag = log.obreroId !== 'SYS' ? \`<span class="text-sky-400 font-bold ml-2">[OB-\${log.obreroId}]</span>\` : '<span class="text-purple-400 font-bold ml-2">[SYS]</span>';
+                    // Reemplazo estricto de Emojis por Iconos Premium
+                    if (log.tipo === 'NUEVA') { bgBadge = 'text-sky-400'; iconClass = 'fa-solid fa-arrow-right-to-bracket'; }
+                    if (log.tipo === 'EXITO') { bgBadge = 'text-green-500'; iconClass = 'fa-solid fa-check-double'; colorBase = 'text-gray-300'; }
+                    if (log.tipo === 'ERROR') { bgBadge = 'text-red-500'; iconClass = 'fa-solid fa-triangle-exclamation'; colorBase = 'text-red-400'; }
+                    if (log.tipo === 'ALERTA') { bgBadge = 'text-orange-500 animate-pulse'; iconClass = 'fa-solid fa-radiation'; colorBase = 'text-orange-400'; }
+                    if (log.tipo === 'COLA') { bgBadge = 'text-indigo-400'; iconClass = 'fa-solid fa-layer-group'; colorBase = 'text-indigo-300'; }
+                    if (log.tipo === 'INFO') { bgBadge = 'text-gold-500'; iconClass = 'fa-solid fa-terminal'; colorBase = 'text-gold-100'; }
+
+                    const duracionStr = log.duracion ? \`<span class="text-gray-600 ml-2">[\${log.duracion}ms]</span>\` : '';
+                    const obreroTag = log.obreroId !== 'SYS' ? \`<span class="text-gold-500 ml-2 border border-gold-500/20 px-1">WK_\${log.obreroId.toString().padStart(2,'0')}</span>\` : '<span class="text-gray-600 ml-2 border border-dark-800 px-1">SYS</span>';
 
                     htmlTemp += \`
-                    <div class="flex items-start gap-2 p-1.5 hover:bg-slate-800/60 rounded transition-colors border-b border-slate-800/50 pb-2">
-                        <div class="text-slate-500 w-24 shrink-0 mt-0.5">\${formatearHora(log.tiempo)}</div>
-                        <div class="w-20 shrink-0 text-center border \${bgBadge} rounded text-[9px] font-bold py-0.5 mt-0.5"><i class="fa-solid \${icono}"></i> \${log.tipo}</div>
-                        <div class="text-slate-400 w-12 shrink-0 text-center mt-0.5">[\${log.reqId}]</div>
-                        <div class="\${colorBase} break-all flex-grow leading-tight">\${log.mensaje} \${obreroTag}\${duracionBadge}</div>
+                    <div class="flex items-start gap-3 p-1 hover:bg-dark-800/50 transition-colors border-l-2 border-transparent hover:border-gold-500">
+                        <div class="text-gray-600 w-24 shrink-0 mt-0.5 text-[10px] tracking-wider">\${formatearHora(log.tiempo)}</div>
+                        <div class="\${bgBadge} w-4 shrink-0 text-center mt-0.5"><i class="\${iconClass}"></i></div>
+                        <div class="text-gray-500 w-14 shrink-0 text-center mt-0.5 tracking-wider text-[10px] border border-dark-800 bg-dark-900">\${log.reqId}</div>
+                        <div class="\${colorBase} break-all flex-grow leading-snug text-[11px]">\${log.mensaje} \${obreroTag}\${duracionStr}</div>
                     </div>
                     \`;
                 });
@@ -394,8 +457,8 @@ app.get('/status', (req, res) => {
             }
 
             async function ejecutarOrden(id) {
-                if(!confirm(\`⚠️ Purga del OBRERO-\${id}. Se destruirá el contenedor. ¿Proceder?\`)) return;
-                try { await fetch(\`/api/tactico/orden66/\${id}\`, { method: 'POST' }); } catch(e) {}
+                if(!confirm(\`WARNING: INIT PURGE PROTOCOL ON WORKER_\${id}? (Destroys container)\`)) return;
+                try { await fetch(\`/api/tactico/estado\`); await fetch(\`/api/tactico/orden66/\${id}\`, { method: 'POST' }); } catch(e) {}
             }
             async function revivir(id) {
                 try { await fetch(\`/api/tactico/revivir/\${id}\`, { method: 'POST' }); } catch(e) {}
@@ -409,7 +472,6 @@ app.get('/status', (req, res) => {
     `;
     res.send(html);
 });
-
 // ============================================================================
 // 4. EL CEREBRO DEL ENRUTADOR (NÚCLEO)
 // ============================================================================
