@@ -24,19 +24,23 @@ const OBREROS = [
 const MAX_LOGS = 50;
 let HISTORIAL = [];
 
-// --- NUEVO: SISTEMA DE ENCOLAMIENTO ---
+// --- SISTEMA DE ENCOLAMIENTO ---
 const COLA_DE_ESPERA = [];
 const TIMEOUT_SALA_ESPERA = 45000; // 45 segundos
 
-const esperarTurno = (requestId, etiqueta) => {
+const esperarTurno = (requestId, etiqueta, esBackground = false) => {
     return new Promise((resolve, reject) => {
-        const timeoutCola = setTimeout(() => {
-            const index = COLA_DE_ESPERA.findIndex(c => c.resolve === resolve);
-            if (index !== -1) COLA_DE_ESPERA.splice(index, 1);
-            reject(new Error("TIMEOUT_COLA"));
-        }, TIMEOUT_SALA_ESPERA);
+        let timeoutCola = null;
+        
+        // Si no es un proceso en background (pago anticipado), aplicamos el límite de tiempo
+        if (!esBackground) {
+            timeoutCola = setTimeout(() => {
+                const index = COLA_DE_ESPERA.findIndex(c => c.resolve === resolve);
+                if (index !== -1) COLA_DE_ESPERA.splice(index, 1);
+                reject(new Error("TIMEOUT_COLA"));
+            }, TIMEOUT_SALA_ESPERA);
+        }
 
-        // Ahora guardamos la etiqueta en la cola
         COLA_DE_ESPERA.push({ resolve, timeoutCola, requestId, etiqueta });
     });
 };
@@ -55,7 +59,7 @@ const agregarLog = (reqId, tipo, mensaje, obreroId = 'SYS', duracion = null) => 
     if (tipo === 'EXITO') icono = '✅';
     if (tipo === 'ERROR') icono = '❌';
     if (tipo === 'ALERTA') icono = '🚨';
-    if (tipo === 'COLA') icono = '⏳'; // Icono extra
+    if (tipo === 'COLA') icono = '⏳';
     
     console.log(`${icono} [REQ: ${reqId}] ${obreroStr} ${mensaje}${duracionStr}`);
 };
@@ -148,8 +152,8 @@ app.get('/status', (req, res) => {
                         <i class="fa-solid fa-satellite-dish text-3xl text-sky-400 neon-text"></i>
                     </div>
                     <div>
-                        <h1 class="text-2xl md:text-3xl font-bold text-white tracking-widest">COMANDANTE <span class="text-sky-400">V4</span></h1>
-                        <p class="text-sky-500/70 text-sm">CENTRO DE MANDO Y ENCOLAMIENTO</p>
+                        <h1 class="text-2xl md:text-3xl font-bold text-white tracking-widest">COMANDANTE <span class="text-sky-400">V4.5</span></h1>
+                        <p class="text-sky-500/70 text-sm">CENTRO DE MANDO Y ENCOLAMIENTO ASÍNCRONO</p>
                     </div>
                 </div>
                 <div class="flex flex-col items-end gap-2">
@@ -338,8 +342,7 @@ app.all('*', async (req, res) => {
 
     const requestId = Math.random().toString(36).substring(2, 7).toUpperCase();
     
-    // --- NUEVA EXTRACCIÓN UNIVERSAL DEL CLIENTE ---
-    let idCliente = "";
+    let etiquetaCliente = "";
     if (req.method === 'POST') {
         if (req.path === '/pagar' && req.body && req.body.id) idCliente = req.body.id;
         else if (req.path === '/pagar-vidanet' && req.body && req.body.datos && req.body.datos.cedula) idCliente = req.body.datos.cedula;
@@ -348,14 +351,11 @@ app.all('*', async (req, res) => {
         else if (req.query && req.query.cedula) idCliente = req.query.cedula;
     }
     
-    // Si hay cliente, creamos la etiqueta. Si no, queda vacía.
     const etiqueta = idCliente ? `[👤 ${idCliente}] ` : "";
 
-    // Micro-función táctica: inyecta la etiqueta a todos los logs de ESTA solicitud
     const log = (tipo, mensaje, obreroId = 'SYS', duracion = null) => {
         agregarLog(requestId, tipo, `${etiqueta}${mensaje}`, obreroId, duracion);
     };
-    // ----------------------------------------------
 
     log('NUEVA', `Solicitud ${req.method} ${req.path}`);
     
@@ -367,6 +367,10 @@ app.all('*', async (req, res) => {
         console.log(formatoLogConsola(`${etiqueta}Body [${requestId}]`, rBody));
     }
 
+    // --- BANDERA DE ESTADO (Para la respuesta anticipada) ---
+    let respuestaEnviada = false;
+    const esRutaPago = (req.path === '/pagar' || req.path === '/pagar-vidanet');
+
     while (intentos < 3 && !exito) {
         const ahora = Date.now();
         const obrerosDisponibles = OBREROS.filter(o => {
@@ -376,15 +380,32 @@ app.all('*', async (req, res) => {
             return true;
         });
         
+        // --- LÓGICA DE COLA CON RESPUESTA ANTICIPADA ---
         if (obrerosDisponibles.length === 0) {
-            log('COLA', `Escuadrón ocupado. Entrando a Sala de Espera (Posición: ${COLA_DE_ESPERA.length + 1})`);
+            
+            // Si es un pago y no hemos respondido, enviamos el 200 OK y activamos la bandera
+            if (esRutaPago && !respuestaEnviada) {
+                res.status(200).json({ status: "OK", message: "Procesando solicitud en background..." });
+                respuestaEnviada = true;
+                log('COLA', `Enviada respuesta anticipada. Esperando Obrero (Pos: ${COLA_DE_ESPERA.length + 1})`);
+            } else if (!esRutaPago) {
+                // Si es consulta, operamos normal
+                log('COLA', `Escuadrón ocupado. Entrando a Sala de Espera (Pos: ${COLA_DE_ESPERA.length + 1})`);
+            }
+
             try {
-                await esperarTurno(requestId, etiqueta); // Pasamos la etiqueta a la sala de espera
+                // Pasamos 'respuestaEnviada' como tercer parámetro a esperarTurno
+                await esperarTurno(requestId, etiqueta, respuestaEnviada); 
                 continue; 
             } catch (err) {
                 if (err.message === "TIMEOUT_COLA") {
-                    log('ERROR', `Misión Abortada: Tiempo máximo en sala de espera superado.`);
-                    return res.status(503).json({ success: false, message: "Líneas saturadas. Por favor intenta de nuevo en unos minutos." });
+                    log('ERROR', `Misión Abortada: Tiempo en sala de espera superado.`);
+                    // Solo respondemos error 503 si NO hemos enviado la respuesta 200 OK anticipada
+                    if (!respuestaEnviada) {
+                        return res.status(503).json({ success: false, message: "Líneas saturadas. Por favor intenta de nuevo." });
+                    }
+                    // Si ya habíamos respondido 200 OK, simplemente morimos en silencio
+                    return; 
                 }
             }
         }
@@ -424,7 +445,12 @@ app.all('*', async (req, res) => {
             }
 
             obreroElegido.fallos = 0;
-            res.status(respuesta.status).json(respuesta.data);
+            
+            // Si la respuesta NO fue enviada anticipadamente (ej. consultas), la enviamos ahora
+            if (!respuestaEnviada) {
+                res.status(respuesta.status).json(respuesta.data);
+            }
+            
             exito = true;
 
         } catch (error) {
@@ -439,7 +465,10 @@ app.all('*', async (req, res) => {
             if (req.path === '/consultar-deudas-vidanet') {
                 log('INFO', `Vidanet rechazó consulta: ${msjResumido.substring(0, 50)}`, obreroElegido.id);
                 const dataRespuesta = error.response && error.response.data ? error.response.data : { success: false, error: error.message };
-                return res.status(statusError).json(dataRespuesta);
+                
+                // Retornamos el error si no hemos respondido aún
+                if (!respuestaEnviada) return res.status(statusError).json(dataRespuesta);
+                return;
             }
 
             intentos++;
@@ -460,7 +489,6 @@ app.all('*', async (req, res) => {
                     if(obj) {
                         obj.activo = true;
                         obj.fallos = 0;
-                        // Nota: Este se queda como agregarLog porque sucede en el futuro (40s después), no pertenece a esta Request.
                         agregarLog('SYS', 'INFO', `Fin de Cuarentena (40s). Obrero resucitado.`, idParaRevivir);
                     }
                 }, 40000); 
@@ -478,8 +506,7 @@ app.all('*', async (req, res) => {
 
             if (COLA_DE_ESPERA.length > 0) {
                 const siguienteEnFila = COLA_DE_ESPERA.shift();
-                clearTimeout(siguienteEnFila.timeoutCola); 
-                // Aquí usamos el agregarLog original pero le inyectamos la etiqueta del cliente en espera
+                if (siguienteEnFila.timeoutCola) clearTimeout(siguienteEnFila.timeoutCola); 
                 agregarLog(siguienteEnFila.requestId, 'INFO', `${siguienteEnFila.etiqueta}Saliendo de la sala de espera. Evaluando obreros...`);
                 siguienteEnFila.resolve(); 
             }
@@ -488,14 +515,17 @@ app.all('*', async (req, res) => {
 
     if (!exito) {
         log('ERROR', 'Misión Fallida: Reintentos agotados.');
-        res.status(500).json({ success: false, message: "El escuadrón está inestable. Reintentos agotados.", detalle: errorFinal });
+        // Solo respondemos el error final si no enviamos el "Fake 200 OK" antes
+        if (!respuestaEnviada) {
+            res.status(500).json({ success: false, message: "El escuadrón está inestable. Reintentos agotados.", detalle: errorFinal });
+        }
     }
 });
 
 const PORT = process.env.PORT || 8080;
 app.listen(PORT, () => {
     console.log(`\n======================================`);
-    console.log(`🚀 COMANDANTE V4 (SALA DE ESPERA Y TELEMETRÍA)`);
+    console.log(`🚀 COMANDANTE V4.5 (FAKE RESPONSE & QUEUE)`);
     console.log(`📡 Puerto: ${PORT}`);
     console.log(`🤖 Obreros: ${OBREROS.length}`);
     console.log(`======================================\n`);
