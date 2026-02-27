@@ -8,7 +8,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // ============================================================================
-// 1. MEMORIA Y ESTADO (LA ARMADURA)
+// 1. MEMORIA Y ESTADO (LA ARMADURA Y LA COLA)
 // ============================================================================
 
 const OBREROS = [
@@ -21,24 +21,32 @@ const OBREROS = [
     { id: 7, url: 'https://obrero-7-5-production.up.railway.app', carga: 0, fallos: 0, activo: true, cocinandoHasta: 0, buscandoServicios: false }
 ];
 
-// Bóveda de Telemetría (Solo guarda los últimos 50 para no explotar la RAM)
 const MAX_LOGS = 50;
 let HISTORIAL = [];
 
-// Función inyectora de logs a la bóveda y a la consola
+// --- NUEVO: SISTEMA DE ENCOLAMIENTO ---
+const COLA_DE_ESPERA = [];
+const TIMEOUT_SALA_ESPERA = 45000; // 45 segundos
+
+const esperarTurno = (requestId) => {
+    return new Promise((resolve, reject) => {
+        const timeoutCola = setTimeout(() => {
+            const index = COLA_DE_ESPERA.findIndex(c => c.resolve === resolve);
+            if (index !== -1) COLA_DE_ESPERA.splice(index, 1);
+            reject(new Error("TIMEOUT_COLA"));
+        }, TIMEOUT_SALA_ESPERA);
+
+        COLA_DE_ESPERA.push({ resolve, timeoutCola, requestId });
+    });
+};
+// ---------------------------------------
+
 const agregarLog = (reqId, tipo, mensaje, obreroId = 'SYS', duracion = null) => {
-    // 1. Guardar en Memoria para el Dashboard
     HISTORIAL.unshift({
-        tiempo: Date.now(),
-        reqId,
-        tipo, // 'NUEVA', 'EXITO', 'ERROR', 'ALERTA', 'INFO'
-        mensaje,
-        obreroId,
-        duracion
+        tiempo: Date.now(), reqId, tipo, mensaje, obreroId, duracion
     });
     if (HISTORIAL.length > MAX_LOGS) HISTORIAL.pop();
 
-    // 2. Imprimir en Consola (Railway) con formato
     const duracionStr = duracion ? ` (${duracion}ms)` : '';
     const obreroStr = obreroId !== 'SYS' ? `[OB-${obreroId}]` : '[SYS]';
     let icono = 'ℹ️';
@@ -46,11 +54,11 @@ const agregarLog = (reqId, tipo, mensaje, obreroId = 'SYS', duracion = null) => 
     if (tipo === 'EXITO') icono = '✅';
     if (tipo === 'ERROR') icono = '❌';
     if (tipo === 'ALERTA') icono = '🚨';
+    if (tipo === 'COLA') icono = '⏳'; // Icono extra
     
     console.log(`${icono} [REQ: ${reqId}] ${obreroStr} ${mensaje}${duracionStr}`);
 };
 
-// Helper para logs largos en consola
 const formatoLogConsola = (titulo, objeto) => {
     try {
         const str = JSON.stringify(objeto, null, 2);
@@ -64,7 +72,7 @@ const formatoLogConsola = (titulo, objeto) => {
 // ============================================================================
 
 app.get('/api/tactico/estado', (req, res) => {
-    res.json({ obreros: OBREROS, historial: HISTORIAL });
+    res.json({ obreros: OBREROS, historial: HISTORIAL, encolados: COLA_DE_ESPERA.length });
 });
 
 app.post('/api/tactico/orden66/:id', (req, res) => {
@@ -139,17 +147,23 @@ app.get('/status', (req, res) => {
                         <i class="fa-solid fa-satellite-dish text-3xl text-sky-400 neon-text"></i>
                     </div>
                     <div>
-                        <h1 class="text-2xl md:text-3xl font-bold text-white tracking-widest">COMANDANTE <span class="text-sky-400">V3.5</span></h1>
-                        <p class="text-sky-500/70 text-sm">CENTRO DE MANDO Y TELEMETRÍA</p>
+                        <h1 class="text-2xl md:text-3xl font-bold text-white tracking-widest">COMANDANTE <span class="text-sky-400">V4</span></h1>
+                        <p class="text-sky-500/70 text-sm">CENTRO DE MANDO Y ENCOLAMIENTO</p>
                     </div>
                 </div>
-                <div class="flex flex-col items-end">
-                    <div class="flex items-center gap-3 bg-slate-800/80 px-4 py-2 rounded-full border border-slate-700">
-                        <span class="relative flex h-3 w-3">
-                            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                            <span class="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
-                        </span>
-                        <span class="text-sm font-semibold tracking-wider text-green-400">ENLACE ACTIVO</span>
+                <div class="flex flex-col items-end gap-2">
+                    <div class="flex items-center gap-3">
+                        <div id="badge-cola" class="flex items-center gap-2 bg-indigo-900/40 px-3 py-1.5 rounded-full border border-indigo-700/50 transition-colors">
+                            <i class="fa-solid fa-users text-indigo-400"></i>
+                            <span id="txt-cola" class="text-xs font-bold tracking-wider text-indigo-400">COLA: 0</span>
+                        </div>
+                        <div class="flex items-center gap-3 bg-slate-800/80 px-4 py-2 rounded-full border border-slate-700">
+                            <span class="relative flex h-3 w-3">
+                                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                                <span class="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
+                            </span>
+                            <span class="text-sm font-semibold tracking-wider text-green-400">ENLACE ACTIVO</span>
+                        </div>
                     </div>
                     <span id="txt-actualizacion" class="text-xs text-slate-500 mt-2">Última lectura: Calculando...</span>
                 </div>
@@ -169,6 +183,8 @@ app.get('/status', (req, res) => {
             const grid = document.getElementById('grid-obreros');
             const terminal = document.getElementById('terminal-logs');
             const txtActualizacion = document.getElementById('txt-actualizacion');
+            const txtCola = document.getElementById('txt-cola');
+            const badgeCola = document.getElementById('badge-cola');
 
             const formatearHora = (ms) => {
                 const d = new Date(ms);
@@ -182,6 +198,17 @@ app.get('/status', (req, res) => {
                     
                     renderizarObreros(data.obreros);
                     renderizarTerminal(data.historial);
+                    
+                    txtCola.innerText = 'COLA: ' + data.encolados;
+                    if (data.encolados > 0) {
+                        badgeCola.classList.replace('bg-indigo-900/40', 'bg-indigo-600/80');
+                        badgeCola.classList.replace('border-indigo-700/50', 'border-indigo-400');
+                        txtCola.classList.replace('text-indigo-400', 'text-white');
+                    } else {
+                        badgeCola.classList.replace('bg-indigo-600/80', 'bg-indigo-900/40');
+                        badgeCola.classList.replace('border-indigo-400', 'border-indigo-700/50');
+                        txtCola.classList.replace('text-white', 'text-indigo-400');
+                    }
                     
                     const ahora = new Date();
                     txtActualizacion.innerText = \`Última lectura: \${ahora.toLocaleTimeString('es-VE', {hour12: false})}.\${ahora.getMilliseconds()}\`;
@@ -260,6 +287,7 @@ app.get('/status', (req, res) => {
                     if (log.tipo === 'EXITO') { bgBadge = 'bg-green-900/50 text-green-400 border-green-700'; icono = 'fa-check'; colorBase = 'text-green-100'; }
                     if (log.tipo === 'ERROR') { bgBadge = 'bg-red-900/50 text-red-400 border-red-700'; icono = 'fa-xmark'; colorBase = 'text-red-200'; }
                     if (log.tipo === 'ALERTA') { bgBadge = 'bg-orange-900/50 text-orange-400 border-orange-700'; icono = 'fa-triangle-exclamation'; colorBase = 'text-orange-200'; }
+                    if (log.tipo === 'COLA') { bgBadge = 'bg-indigo-900/50 text-indigo-400 border-indigo-700'; icono = 'fa-hourglass-half'; colorBase = 'text-indigo-200'; }
                     
                     const duracionBadge = log.duracion ? \`<span class="text-slate-500 ml-2">(\${log.duracion}ms)</span>\` : '';
                     const obreroTag = log.obreroId !== 'SYS' ? \`<span class="text-sky-400 font-bold ml-2">[OB-\${log.obreroId}]</span>\` : '<span class="text-purple-400 font-bold ml-2">[SYS]</span>';
@@ -298,7 +326,6 @@ app.get('/status', (req, res) => {
 // ============================================================================
 
 app.all('*', async (req, res) => {
-    // Evitar que el dashboard sature los logs
     if (req.originalUrl === '/favicon.ico' || req.originalUrl.startsWith('/api/tactico')) return res.status(204).end();
 
     let intentos = 0;
@@ -310,16 +337,24 @@ app.all('*', async (req, res) => {
 
     const requestId = Math.random().toString(36).substring(2, 7).toUpperCase();
     
-    // Log inicial
-    agregarLog(requestId, 'NUEVA', `Solicitud ${req.method} ${req.originalUrl}`);
+    let etiquetaCliente = "";
+    if (req.path === '/pagar' && req.body && req.body.id) {
+        etiquetaCliente = ` [Cliente: ${req.body.id}]`;
+    } else if (req.path === '/pagar-vidanet' && req.body && req.body.datos && req.body.datos.cedula) {
+        etiquetaCliente = ` [C.I: ${req.body.datos.cedula}]`;
+    }
+    
+    agregarLog(requestId, 'NUEVA', `Solicitud ${req.method} ${req.path}${etiquetaCliente}`);
+    
     if (req.method !== 'GET' && Object.keys(req.body).length > 0) {
-        const rBody = { ...req.body };
-        if (rBody.datos && rBody.datos.rutaImagen) rBody.datos.rutaImagen = "[Oculta]";
+        const rBody = JSON.parse(JSON.stringify(req.body)); 
+        if (rBody.datos && rBody.datos.rutaImagen) {
+             rBody.datos.rutaImagen = "[Imagen Oculta solo en el Log]";
+        }
         console.log(formatoLogConsola(`Body [${requestId}]`, rBody));
     }
 
     while (intentos < 3 && !exito) {
-        // --- FILTROS DE DISPONIBILIDAD ---
         const ahora = Date.now();
         const obrerosDisponibles = OBREROS.filter(o => {
             if (!o.activo || obrerosDescartados.includes(o.id)) return false;
@@ -328,12 +363,24 @@ app.all('*', async (req, res) => {
             return true;
         });
         
+        // --- NUEVO: LÓGICA DE SALA DE ESPERA ---
         if (obrerosDisponibles.length === 0) {
-            agregarLog(requestId, 'ALERTA', 'CRÍTICO: No hay obreros disponibles o todos fallaron.');
-            return res.status(503).json({ success: false, message: "Escuadrón colapsado." });
+            agregarLog(requestId, 'COLA', `Escuadrón ocupado. Entrando a Sala de Espera (Posición: ${COLA_DE_ESPERA.length + 1})`);
+            try {
+                // Pausamos esta petición específica
+                await esperarTurno(requestId);
+                // Si llegamos aquí, un obrero se liberó y nos dio el pase. Reiniciamos el ciclo while.
+                continue; 
+            } catch (err) {
+                // Si explotó el timeout de 45s
+                if (err.message === "TIMEOUT_COLA") {
+                    agregarLog(requestId, 'ERROR', `Misión Abortada: Tiempo máximo en sala de espera superado.`);
+                    return res.status(503).json({ success: false, message: "Líneas saturadas. Por favor intenta de nuevo en unos minutos." });
+                }
+            }
         }
+        // ----------------------------------------
 
-        // --- SELECCIÓN ---
         const menorCarga = Math.min(...obrerosDisponibles.map(o => o.carga));
         const empatados = obrerosDisponibles.filter(o => o.carga === menorCarga);
         obreroElegido = empatados[Math.floor(Math.random() * empatados.length)];
@@ -341,7 +388,6 @@ app.all('*', async (req, res) => {
         try {
             obreroElegido.carga++;
             
-            // --- CANDADOS PRE-PETICIÓN ---
             if (req.path === '/buscar-servicios') {
                 obreroElegido.buscandoServicios = true;
             }
@@ -358,17 +404,15 @@ app.all('*', async (req, res) => {
 
             const duracion = Date.now() - inicioReloj;
             
-            // --- ÉXITO ---
             agregarLog(requestId, 'EXITO', `Respuesta HTTP ${respuesta.status} devuelta.`, obreroElegido.id, duracion);
             if(respuesta.data) console.log(formatoLogConsola(`Respuesta [${requestId}]`, respuesta.data));
 
-            // --- TIEMPOS DE COCCIÓN ---
             if (req.path === '/pagar') {
                 obreroElegido.cocinandoHasta = Date.now() + 60000;
-                agregarLog(requestId, 'INFO', 'Let Him Cook: Inicia cocción de 35s', obreroElegido.id);
+                agregarLog(requestId, 'INFO', `Let Him Cook (60s)${etiquetaCliente}`, obreroElegido.id);
             } else if (req.path === '/pagar-vidanet') {
                 obreroElegido.cocinandoHasta = Date.now() + 15000;
-                agregarLog(requestId, 'INFO', 'Let Him Cook: Inicia cocción de 15s', obreroElegido.id);
+                agregarLog(requestId, 'INFO', `Let Him Cook (15s)${etiquetaCliente}`, obreroElegido.id);
             }
 
             obreroElegido.fallos = 0;
@@ -376,7 +420,6 @@ app.all('*', async (req, res) => {
             exito = true;
 
         } catch (error) {
-            // --- MANEJO DE ERRORES ---
             const statusError = error.response ? error.response.status : 500; 
             let msjResumido = error.message;
             if(error.response && error.response.data && typeof error.response.data === 'object' && error.response.data.error) {
@@ -385,7 +428,6 @@ app.all('*', async (req, res) => {
                 msjResumido = typeof error.response.data === 'object' ? JSON.stringify(error.response.data) : error.response.data;
             }
 
-            // Excepción Vidanet (Sin castigo)
             if (req.path === '/consultar-deudas-vidanet') {
                 agregarLog(requestId, 'INFO', `Vidanet rechazó consulta: ${msjResumido.substring(0, 50)}`, obreroElegido.id);
                 const dataRespuesta = error.response && error.response.data ? error.response.data : { success: false, error: error.message };
@@ -398,14 +440,12 @@ app.all('*', async (req, res) => {
 
             agregarLog(requestId, 'ERROR', `Fallo Intento ${intentos}/3 (HTTP ${statusError}): ${msjResumido.substring(0,60)}`, obreroElegido.id);
 
-            // --- PROTOCOLO DE AUTODESTRUCCIÓN ---
             if (obreroElegido.fallos >= 2) {
                 agregarLog(requestId, 'ALERTA', `CIRCUIT BREAKER: Obrero en cuarentena (2 fallos). Enviando Purga.`, obreroElegido.id);
                 obreroElegido.activo = false;
                 
                 axios.post(`${obreroElegido.url}/orden-66`, {}, { headers: { 'x-comandante-secret': 'IcaroSoft_Destruccion_Inminente_2026' }, timeout: 5000 }).catch(() => {});
 
-                // Closure para capturar el ID correcto para el setTimeout
                 const idParaRevivir = obreroElegido.id;
                 setTimeout(() => {
                     const obj = OBREROS.find(o => o.id === idParaRevivir);
@@ -419,7 +459,6 @@ app.all('*', async (req, res) => {
             errorFinal = msjResumido;
 
         } finally {
-            // --- LIMPIEZA POST-PETICIÓN ---
             if (obreroElegido) {
                 obreroElegido.carga--;
                 if (req.path === '/buscar-servicios') {
@@ -427,10 +466,19 @@ app.all('*', async (req, res) => {
                     agregarLog(requestId, 'INFO', 'Candado Liberado: Termina búsqueda de servicios.', obreroElegido.id);
                 }
             }
+
+            // --- NUEVO: LIBERADOR DE COLA ---
+            // Cuando este obrero termina TODO su proceso (éxito o fallo), llama al siguiente.
+            if (COLA_DE_ESPERA.length > 0) {
+                const siguienteEnFila = COLA_DE_ESPERA.shift();
+                clearTimeout(siguienteEnFila.timeoutCola); 
+                agregarLog(siguienteEnFila.requestId, 'INFO', 'Saliendo de la sala de espera. Evaluando obreros...');
+                siguienteEnFila.resolve(); 
+            }
+            // ---------------------------------
         }
     }
 
-    // --- FALLO TOTAL ---
     if (!exito) {
         agregarLog(requestId, 'ERROR', 'Misión Fallida: Reintentos agotados.');
         res.status(500).json({ success: false, message: "El escuadrón está inestable. Reintentos agotados.", detalle: errorFinal });
@@ -440,7 +488,7 @@ app.all('*', async (req, res) => {
 const PORT = process.env.PORT || 8080;
 app.listen(PORT, () => {
     console.log(`\n======================================`);
-    console.log(`🚀 COMANDANTE V3.5 (C2 + TELEMETRÍA)`);
+    console.log(`🚀 COMANDANTE V4 (SALA DE ESPERA)`);
     console.log(`📡 Puerto: ${PORT}`);
     console.log(`🤖 Obreros: ${OBREROS.length}`);
     console.log(`======================================\n`);
