@@ -364,7 +364,7 @@ app.all('*', async (req, res) => {
 
             // --- TIEMPOS DE COCCIÓN ---
             if (req.path === '/pagar') {
-                obreroElegido.cocinandoHasta = Date.now() + 35000;
+                obreroElegido.cocinandoHasta = Date.now() + 60000;
                 agregarLog(requestId, 'INFO', 'Let Him Cook: Inicia cocción de 35s', obreroElegido.id);
             } else if (req.path === '/pagar-vidanet') {
                 obreroElegido.cocinandoHasta = Date.now() + 15000;
