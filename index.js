@@ -499,7 +499,7 @@ app.all('*', async (req, res) => {
         obreroElegido = empatados[Math.floor(Math.random() * empatados.length)];
 
         // --- CORTACIRCUITOS DINÁMICO (TIMEOUT) ---
-        const limiteTiempo = req.path === '/buscar-servicios' ? 15000 : 120000;
+        const limiteTiempo = req.path === '/buscar-servicios' ? 17000 : 120000;
         // ------------------------------------------
 
         try {
