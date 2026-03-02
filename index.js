@@ -625,7 +625,8 @@ app.all('*', async (req, res) => {
 
     const requestId = Math.random().toString(36).substring(2, 7).toUpperCase();
     
-    let etiquetaCliente = "";
+    // Al declararla con 'let', la hacemos estrictamente PRIVADA para esta petición
+    let idCliente = ""; 
     if (req.method === 'POST') {
         if (req.path === '/pagar' && req.body && req.body.id) idCliente = req.body.id;
         else if (req.path === '/pagar-vidanet' && req.body && req.body.datos && req.body.datos.cedula) idCliente = req.body.datos.cedula;
