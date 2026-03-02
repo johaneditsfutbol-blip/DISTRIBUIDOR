@@ -720,9 +720,11 @@ app.all('*', async (req, res) => {
             }
             // --------------------------------------------------------
 
-            // Le inyectamos nuestra propia dirección de retorno al Obrero
-            const webhookUrl = `${req.protocol}://${req.get('host')}/api/tactico/webhook`;
+            // --- FIX RAILWAY PROXY: Forzamos HTTPS para evitar pérdida de datos por redirección 301 ---
+            const protocoloReal = req.headers['x-forwarded-proto'] || 'https'; 
+            const webhookUrl = `${protocoloReal}://${req.get('host')}/api/tactico/webhook`;
             const reqBody = req.method !== 'GET' ? { ...req.body, reqId: requestId, webhookUrl } : undefined;
+            // ------------------------------------------------------------------------------------------
 
             const respuesta = await axios({
                 method: req.method,
