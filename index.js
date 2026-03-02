@@ -697,8 +697,9 @@ app.all('*', async (req, res) => {
         const empatados = obrerosDisponibles.filter(o => o.carga === menorCarga);
         obreroElegido = empatados[Math.floor(Math.random() * empatados.length)];
 
-        // --- CORTACIRCUITOS DINÁMICO (TIMEOUT) ---
-        const limiteTiempo = req.path === '/buscar-servicios' ? 17000 : 120000;
+        // --- CORTACIRCUITOS DINÁMICO (TIMEOUT RED) ---
+        // Aumentamos el límite de red a 130s para darle oportunidad al Watchdog (120s) de actuar primero
+        const limiteTiempo = req.path === '/buscar-servicios' ? 17000 : 130000;
         // ------------------------------------------
 
         try {
@@ -709,6 +710,15 @@ app.all('*', async (req, res) => {
             }
 
             console.log(`  [>> REQ: ${requestId}] ${etiqueta}Intentando Obrero ${obreroElegido.id} (Intento ${intentos + 1}/3)`);
+
+            // --- 🎯 INYECCIÓN VITAL: RESPUESTA ANTICIPADA SIEMPRE ---
+            // Si es un pago, no importa si hay cola o no, enviamos el 200 OK INMEDIATAMENTE
+            if (esRutaPago && !respuestaEnviada) {
+                res.status(200).json({ status: "OK", message: "Procesando solicitud en background..." });
+                respuestaEnviada = true;
+                log('INFO', `Respuesta HTTP 200 (Anticipada) enviada al bot.`);
+            }
+            // --------------------------------------------------------
 
             // Le inyectamos nuestra propia dirección de retorno al Obrero
             const webhookUrl = `${req.protocol}://${req.get('host')}/api/tactico/webhook`;
@@ -724,15 +734,16 @@ app.all('*', async (req, res) => {
 
             // Si es un pago, activamos los cronómetros y pausamos la ejecución
             if (esRutaPago) {
+                // TIEMPOS ACTUALIZADOS DEL PERRO GUARDIÁN (120s y 60s)
                 if (req.path === '/pagar') {
-                    obreroElegido.cocinandoHasta = Date.now() + 85000;
-                    log('INFO', `Let Him Cook (80s) - Esperando Reporte Radio...`, obreroElegido.id);
+                    obreroElegido.cocinandoHasta = Date.now() + 125000;
+                    log('INFO', `Let Him Cook (120s) - Esperando Reporte Radio...`, obreroElegido.id);
                 } else if (req.path === '/pagar-vidanet') {
-                    obreroElegido.cocinandoHasta = Date.now() + 45000;
-                    log('INFO', `Let Him Cook (40s) - Esperando Reporte Radio...`, obreroElegido.id);
+                    obreroElegido.cocinandoHasta = Date.now() + 65000;
+                    log('INFO', `Let Him Cook (60s) - Esperando Reporte Radio...`, obreroElegido.id);
                 }
 
-                const timeoutWatchdog = req.path === '/pagar' ? 80000 : 40000;
+                const timeoutWatchdog = req.path === '/pagar' ? 120000 : 60000;
                 
                 // 🛑 EL COMANDANTE SE PAUSA AQUÍ HASTA QUE EL OBRERO AVISE O EL PERRO MUERDA 🛑
                 const rMision = await esperarWebhook(requestId, timeoutWatchdog);
@@ -776,13 +787,13 @@ app.all('*', async (req, res) => {
             obreroElegido.fallos = 0;
             exito = true;
 
-            } catch (error) {
+        } catch (error) {
             const statusError = error.response ? error.response.status : 500; 
             let msjResumido = error.message;
             
             // --- INTERCEPTORES DE FALLA ---
             if (error.message === "WATCHDOG_TIMEOUT") {
-                msjResumido = `☠️ WATCHDOG: Obrero caído. No reportó por radio a tiempo. Reasignando...`;
+                msjResumido = `☠️ WATCHDOG: Obrero caído. No reportó por radio a tiempo (Timeout superado). Reasignando...`;
             } else if (error.code === 'ECONNABORTED' && error.message.includes('timeout')) {
                 msjResumido = `TIMEOUT: Obrero congelado. No respondió en ${limiteTiempo / 1000}s.`;
             } else if(error.response && error.response.data && typeof error.response.data === 'object' && error.response.data.error) {
@@ -804,7 +815,7 @@ app.all('*', async (req, res) => {
             obreroElegido.fallos++;
             obrerosDescartados.push(obreroElegido.id);
 
-            log('ERROR', `Fallo Intento ${intentos}/3 (HTTP ${statusError}): ${msjResumido.substring(0,60)}`, obreroElegido.id);
+            log('ERROR', `Fallo Intento ${intentos}/3: ${msjResumido.substring(0,80)}`, obreroElegido.id);
 
             if (obreroElegido.fallos >= 2) {
                 log('ALERTA', `CIRCUIT BREAKER: Obrero en cuarentena (2 fallos). Enviando Purga.`, obreroElegido.id);
@@ -854,7 +865,7 @@ app.all('*', async (req, res) => {
 const PORT = process.env.PORT || 8080;
 app.listen(PORT, () => {
     console.log(`\n======================================`);
-    console.log(`🚀 COMANDANTE V4.6 (FAIL FAST & QUEUE)`);
+    console.log(`🚀 COMANDANTE V4.8 (WATCHDOG & WEBHOOKS)`);
     console.log(`📡 Puerto: ${PORT}`);
     console.log(`🤖 Obreros: ${OBREROS.length}`);
     console.log(`======================================\n`);
