@@ -48,6 +48,19 @@ const esperarTurno = (requestId, etiqueta, esBackground = false) => {
         COLA_DE_ESPERA.push({ resolve, timeoutCola, requestId, etiqueta });
     });
 };
+
+// --- SISTEMA DE PERRO GUARDIÁN (WATCHDOG & WEBHOOKS) ---
+const PAGOS_EN_VUELO = new Map();
+
+const esperarWebhook = (reqId, timeoutMs) => {
+    return new Promise((resolve, reject) => {
+        const timer = setTimeout(() => {
+            PAGOS_EN_VUELO.delete(reqId);
+            reject(new Error("WATCHDOG_TIMEOUT"));
+        }, timeoutMs);
+        PAGOS_EN_VUELO.set(reqId, { resolve, timer });
+    });
+};
 // ---------------------------------------
 
 const agregarLog = (reqId, tipo, mensaje, obreroId = 'SYS', duracion = null) => {
@@ -82,6 +95,19 @@ const formatoLogConsola = (titulo, objeto) => {
 
 app.get('/api/tactico/estado', (req, res) => {
     res.json({ obreros: OBREROS, historial: HISTORIAL, encolados: COLA_DE_ESPERA.length, pagos: PAGOS_EXITOSOS });
+});
+
+// --- NUEVO: RECEPTOR DE RADIO DE LOS OBREROS ---
+app.post('/api/tactico/webhook', (req, res) => {
+    const { reqId, exito, mensaje, sistema } = req.body;
+    res.status(200).send("Recibido base");
+    
+    if (PAGOS_EN_VUELO.has(reqId)) {
+        const mision = PAGOS_EN_VUELO.get(reqId);
+        clearTimeout(mision.timer); // Apagamos el Perro Guardián
+        PAGOS_EN_VUELO.delete(reqId);
+        mision.resolve({ exito, mensaje, sistema }); // Despertamos al Comandante
+    }
 });
 
 app.post('/api/tactico/orden66/:id', (req, res) => {
@@ -684,55 +710,80 @@ app.all('*', async (req, res) => {
 
             console.log(`  [>> REQ: ${requestId}] ${etiqueta}Intentando Obrero ${obreroElegido.id} (Intento ${intentos + 1}/3)`);
 
+            // Le inyectamos nuestra propia dirección de retorno al Obrero
+            const webhookUrl = `${req.protocol}://${req.get('host')}/api/tactico/webhook`;
+            const reqBody = req.method !== 'GET' ? { ...req.body, reqId: requestId, webhookUrl } : undefined;
+
             const respuesta = await axios({
                 method: req.method,
                 url: `${obreroElegido.url}${req.originalUrl}`,
-                data: req.method !== 'GET' ? req.body : undefined,
+                data: reqBody,
                 headers: { 'Content-Type': 'application/json' },
-                timeout: limiteTiempo // <-- SE APLICA EL LÍMITE DE TIEMPO AQUÍ
+                timeout: limiteTiempo 
             });
 
-            const duracion = Date.now() - inicioReloj;
-            
-            log('EXITO', `Respuesta HTTP ${respuesta.status} devuelta.`, obreroElegido.id, duracion);
-            if(respuesta.data) console.log(formatoLogConsola(`${etiqueta}Respuesta [${requestId}]`, respuesta.data));
-
-            // --- INYECCIÓN DEL REGISTRO PARA LOS JEFES ---
+            // Si es un pago, activamos los cronómetros y pausamos la ejecución
             if (esRutaPago) {
-                PAGOS_EXITOSOS.unshift({
-                    reqId: requestId,
-                    tiempo: Date.now(),
-                    cliente: idCliente || 'DESCONOCIDO',
-                    sistema: req.path === '/pagar' ? 'ICAROSOFT' : 'VIDANET',
-                    duracion: duracion
-                });
-                if (PAGOS_EXITOSOS.length > MAX_PAGOS) PAGOS_EXITOSOS.pop();
-            }
-            // ---------------------------------------------
+                if (req.path === '/pagar') {
+                    obreroElegido.cocinandoHasta = Date.now() + 85000;
+                    log('INFO', `Let Him Cook (80s) - Esperando Reporte Radio...`, obreroElegido.id);
+                } else if (req.path === '/pagar-vidanet') {
+                    obreroElegido.cocinandoHasta = Date.now() + 45000;
+                    log('INFO', `Let Him Cook (40s) - Esperando Reporte Radio...`, obreroElegido.id);
+                }
 
-            if (req.path === '/pagar') {
-                obreroElegido.cocinandoHasta = Date.now() + 60000;
-                log('INFO', `Let Him Cook (60s)`, obreroElegido.id);
-            } else if (req.path === '/pagar-vidanet') {
-                obreroElegido.cocinandoHasta = Date.now() + 15000;
-                log('INFO', `Let Him Cook (15s)`, obreroElegido.id);
+                const timeoutWatchdog = req.path === '/pagar' ? 80000 : 40000;
+                
+                // 🛑 EL COMANDANTE SE PAUSA AQUÍ HASTA QUE EL OBRERO AVISE O EL PERRO MUERDA 🛑
+                const rMision = await esperarWebhook(requestId, timeoutWatchdog);
+                
+                const duracion = Date.now() - inicioReloj;
+
+                if (rMision.exito) {
+                    log('EXITO', `Misión completada: ${rMision.mensaje}`, obreroElegido.id, duracion);
+                    PAGOS_EXITOSOS.unshift({
+                        reqId: requestId, tiempo: Date.now(), cliente: idCliente || 'DESCONOCIDO',
+                        sistema: rMision.sistema, duracion: duracion
+                    });
+                } else {
+                    // Falló. ¿Es culpa del cliente o técnica?
+                    const msgL = rMision.mensaje.toLowerCase();
+                    const esCulpaCliente = msgL.includes("referencia") || msgL.includes("dirección") || msgL.includes("no existe") || msgL.includes("abortado");
+
+                    if (esCulpaCliente) {
+                        log('ALERTA', `Rechazado (Cliente): ${rMision.mensaje}`, obreroElegido.id, duracion);
+                        PAGOS_EXITOSOS.unshift({
+                            reqId: requestId, tiempo: Date.now(), cliente: idCliente || 'DESCONOCIDO',
+                            sistema: `${rMision.sistema} (RECHAZADO)`, duracion: duracion
+                        });
+                        // Como es culpa del cliente, NO reintentamos. Se termina la misión.
+                    } else {
+                        // Error técnico. Lanzamos error para que el bloque 'catch' lo atrape y reasigne el pago
+                        throw new Error(`Fallo interno del Obrero: ${rMision.mensaje}`);
+                    }
+                }
+                if (PAGOS_EXITOSOS.length > MAX_PAGOS) PAGOS_EXITOSOS.pop();
+
+            } else {
+                // Lógica normal para Consultas de Saldo (Sincrónicas)
+                const duracion = Date.now() - inicioReloj;
+                log('EXITO', `Respuesta HTTP ${respuesta.status} devuelta.`, obreroElegido.id, duracion);
+                if(respuesta.data) console.log(formatoLogConsola(`${etiqueta}Respuesta [${requestId}]`, respuesta.data));
+                
+                if (!respuestaEnviada) res.status(respuesta.status).json(respuesta.data);
             }
 
             obreroElegido.fallos = 0;
-            
-            // Si la respuesta NO fue enviada anticipadamente (ej. consultas), la enviamos ahora
-            if (!respuestaEnviada) {
-                res.status(respuesta.status).json(respuesta.data);
-            }
-            
             exito = true;
 
-        } catch (error) {
+            } catch (error) {
             const statusError = error.response ? error.response.status : 500; 
             let msjResumido = error.message;
             
-            // --- INTERCEPTOR DE TIMEOUT ---
-            if (error.code === 'ECONNABORTED' && error.message.includes('timeout')) {
+            // --- INTERCEPTORES DE FALLA ---
+            if (error.message === "WATCHDOG_TIMEOUT") {
+                msjResumido = `☠️ WATCHDOG: Obrero caído. No reportó por radio a tiempo. Reasignando...`;
+            } else if (error.code === 'ECONNABORTED' && error.message.includes('timeout')) {
                 msjResumido = `TIMEOUT: Obrero congelado. No respondió en ${limiteTiempo / 1000}s.`;
             } else if(error.response && error.response.data && typeof error.response.data === 'object' && error.response.data.error) {
                 msjResumido = error.response.data.error; 
