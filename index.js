@@ -791,6 +791,27 @@ app.all('*', async (req, res) => {
                 // Lógica normal para Consultas de Saldo (Sincrónicas)
                 const duracion = Date.now() - inicioReloj;
                 log('EXITO', `Respuesta HTTP ${respuesta.status} devuelta.`, obreroElegido.id, duracion);
+                
+                // --- 🤖 ADAPTADOR DE SALIDA PARA VIVIAN ---
+                // Si la petición viene de Vivian y trae un Array de servicios, lo aplanamos a Objeto.
+                if (req.query.origen === 'vivian' && respuesta.data && respuesta.data.data && Array.isArray(respuesta.data.data.servicios)) {
+                    log('INFO', 'Traduciendo Array de servicios a Objeto para Vivian...', obreroElegido.id);
+                    
+                    const serviciosObj = {};
+                    const arrayOriginal = respuesta.data.data.servicios;
+                    
+                    // Convertimos [{plan: "A"}, {plan: "B"}] a { "servicio_1": {plan: "A"}, "servicio_2": {plan: "B"} }
+                    arrayOriginal.forEach((servicio, index) => {
+                        serviciosObj[`servicio_${index + 1}`] = servicio;
+                    });
+                    
+                    // Reemplazamos el array con el nuevo objeto
+                    respuesta.data.data.servicios = serviciosObj;
+                    // Le agregamos un contador para que Vivian sepa cuántos hay
+                    respuesta.data.data.total_servicios = arrayOriginal.length; 
+                }
+                // ------------------------------------------
+
                 if(respuesta.data) console.log(formatoLogConsola(`${etiqueta}Respuesta [${requestId}]`, respuesta.data));
                 
                 if (!respuestaEnviada) res.status(respuesta.status).json(respuesta.data);
