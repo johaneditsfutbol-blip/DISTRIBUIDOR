@@ -787,28 +787,51 @@ app.all('*', async (req, res) => {
                 }
                 if (PAGOS_EXITOSOS.length > MAX_PAGOS) PAGOS_EXITOSOS.pop();
 
-            } else {
+                } else {
                 // Lógica normal para Consultas de Saldo (Sincrónicas)
                 const duracion = Date.now() - inicioReloj;
                 log('EXITO', `Respuesta HTTP ${respuesta.status} devuelta.`, obreroElegido.id, duracion);
                 
-                // --- 🤖 ADAPTADOR DE SALIDA PARA VIVIAN ---
-                // Si la petición viene de Vivian y trae un Array de servicios, lo aplanamos a Objeto.
+                // --- 🤖 ADAPTADOR DE SALIDA PARA VIVIAN (CON CEREBRO Y EN USD) ---
+                // Si la petición viene de Vivian y trae un Array de servicios, lo aplanamos a Objeto y resumimos.
                 if (req.query.origen === 'vivian' && respuesta.data && respuesta.data.data && Array.isArray(respuesta.data.data.servicios)) {
-                    log('INFO', 'Traduciendo Array de servicios a Objeto para Vivian...', obreroElegido.id);
+                    log('INFO', 'Traduciendo y resumiendo datos para Vivian...', obreroElegido.id);
                     
                     const serviciosObj = {};
                     const arrayOriginal = respuesta.data.data.servicios;
                     
-                    // Convertimos [{plan: "A"}, {plan: "B"}] a { "servicio_1": {plan: "A"}, "servicio_2": {plan: "B"} }
+                    let deudaTotalNum = 0;
+                    let cantidadSuspendidos = 0;
+                    
+                    // Convertimos el Array en un Objeto y calculamos el resumen
                     arrayOriginal.forEach((servicio, index) => {
                         serviciosObj[`servicio_${index + 1}`] = servicio;
+                        
+                        // Calcular deudas en DÓLARES (ej. "112,00" -> 112.00 para poder sumar)
+                        if (servicio.saldo && servicio.saldo !== "N/A" && servicio.saldo !== "0,00" && servicio.saldo !== "0.00") {
+                            let saldoLimpio = servicio.saldo.replace(/\./g, '').replace(',', '.');
+                            let saldoNum = parseFloat(saldoLimpio);
+                            if (!isNaN(saldoNum)) deudaTotalNum += saldoNum;
+                        }
+                        
+                        // Contar servicios suspendidos
+                        if (servicio.estado && servicio.estado.toLowerCase().includes('suspendido')) {
+                            cantidadSuspendidos++;
+                        }
                     });
                     
-                    // Reemplazamos el array con el nuevo objeto
+                    // Reemplazamos el array con el nuevo objeto de servicios aplanados
                     respuesta.data.data.servicios = serviciosObj;
-                    // Le agregamos un contador para que Vivian sepa cuántos hay
-                    respuesta.data.data.total_servicios = arrayOriginal.length; 
+                    
+                    // 🧠 INYECTAMOS EL RESUMEN EJECUTIVO PARA VIVIAN (TODO EN UNA SOLA CAJA)
+                    respuesta.data.data.resumen = {
+                        total_servicios: arrayOriginal.length, // <-- AHORA SÍ ESTÁ DENTRO DEL RESUMEN
+                        tiene_deuda: deudaTotalNum > 0,
+                        deuda_total_usd: deudaTotalNum > 0 ? deudaTotalNum.toFixed(2).replace('.', ',') : "0,00",
+                        hay_suspendidos: cantidadSuspendidos > 0,
+                        cantidad_suspendidos: cantidadSuspendidos,
+                        todos_activos: cantidadSuspendidos === 0
+                    };
                 }
                 // ------------------------------------------
 
