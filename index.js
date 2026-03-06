@@ -721,6 +721,15 @@ app.all('*', async (req, res) => {
             }
             // --------------------------------------------------------
 
+            // --- 🧹 ADUANA DE LIMPIEZA CENTRAL (COMANDANTE) ---
+            // Detectamos y aniquilamos los saltos de línea (\n) SOLO para los registros de Icaro
+            if (req.method === 'POST' && req.path === '/pagar' && req.body && req.body.datos) {
+                if (typeof req.body.datos.direccion === 'string') {
+                    req.body.datos.direccion = req.body.datos.direccion.replace(/[\r\n]+/g, ' ').replace(/\s+/g, ' ').trim();
+                }
+            }
+            // --------------------------------------------------
+
             // --- FIX RAILWAY PROXY: Forzamos HTTPS para evitar pérdida de datos por redirección 301 ---
             const protocoloReal = req.headers['x-forwarded-proto'] || 'https'; 
             const webhookUrl = `${protocoloReal}://${req.get('host')}/api/tactico/webhook`;
