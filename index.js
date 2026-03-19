@@ -24,7 +24,7 @@ const OBREROS = [
     { id: 7, url: 'https://obrero-7-5-production.up.railway.app', carga: 0, fallos: 0, activo: true, cocinandoHasta: 0, buscandoServicios: false, rwServiceId: '7adc6cb6-ffe7-42a2-9ee9-22171b5266b6', rwEnvId: ENV_PROD_ID, rwProjectName: NOMBRE_PROYECTO }
 ];
 
-const MAX_LOGS = 10000;
+const MAX_LOGS = 15000;
 let HISTORIAL = [];
 
 // --- NUEVA BÓVEDA EXCLUSIVA PARA LOS JEFES (PAGOS EXITOSOS) ---
@@ -807,7 +807,11 @@ app.all('*', async (req, res) => {
         const obrerosDisponibles = OBREROS.filter(o => {
             if (!o.activo || obrerosDescartados.includes(o.id)) return false;
             if (ahora < o.cocinandoHasta) return false;
-            if (req.path === '/buscar-servicios' && o.buscandoServicios) return false;
+            
+            // 🛑 EL CANDADO DE TITANIO: Bloqueo absoluto por carga. 
+            // Si el Obrero tiene 1 sola petición de CUALQUIER tipo, se vuelve invisible.
+            if (o.carga > 0) return false; 
+            
             return true;
         });
         
@@ -847,7 +851,7 @@ app.all('*', async (req, res) => {
 
         // --- CORTACIRCUITOS DINÁMICO (TIMEOUT RED) ---
         // Aumentamos el límite de red a 130s para darle oportunidad al Watchdog (120s) de actuar primero
-        const limiteTiempo = req.path === '/buscar-servicios' ? 17000 : 130000;
+        const limiteTiempo = req.path === '/buscar-servicios' ? 15000 : 130000;
         // ------------------------------------------
 
         try {
@@ -1008,7 +1012,8 @@ app.all('*', async (req, res) => {
             if (error.message === "WATCHDOG_TIMEOUT") {
                 msjResumido = `☠️ WATCHDOG: Obrero caído. No reportó por radio a tiempo (Timeout superado). Reasignando...`;
             } else if (error.code === 'ECONNABORTED' && error.message.includes('timeout')) {
-                msjResumido = `TIMEOUT: Obrero congelado. No respondió en ${limiteTiempo / 1000}s.`;
+                msjResumido = `TIMEOUT: Obrero abortado a los ${limiteTiempo / 1000}s. Petición huérfana detectada.`;
+                obreroElegido.fallos = 99; // ☢️ INYECCIÓN LETAL: Obligamos al Comandante a ejecutar la Orden 66 más abajo para limpiar el choque de trenes.
             } else if(error.response && error.response.data && typeof error.response.data === 'object' && error.response.data.error) {
                 msjResumido = error.response.data.error; 
             } else if (error.response && error.response.data) {
