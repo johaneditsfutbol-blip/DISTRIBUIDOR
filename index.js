@@ -32,6 +32,10 @@ let PAGOS_EXITOSOS = [];
 const COLA_DE_ESPERA = [];
 const TIMEOUT_SALA_ESPERA = 45000; // 45 segundos
 
+// --- SISTEMA DE CACHÉ EN MEMORIA ---
+const CACHE_SERVICIOS = new Map();
+const TIEMPO_CACHE = 5 * 60 * 1000; // 5 minutos en milisegundos
+
 const esperarTurno = (requestId, etiqueta, esBackground = false) => {
     return new Promise((resolve, reject) => {
         let timeoutCola = null;
@@ -290,7 +294,7 @@ app.get('/status', (req, res) => {
                 </div>
 
                 <div id="view-ledger" class="w-full h-full flex flex-col hidden">
-                    <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4 border-b border-dark-800 pb-4">
+                    <div class="grid grid-cols-2 md:grid-cols-5 gap-3 mb-4 border-b border-dark-800 pb-4">
                         <div class="bg-dark-900 border border-dark-800 p-2 text-center">
                             <div class="micro-data mb-1 text-gray-500">TOTAL PAGOS REGISTRADOS</div>
                             <div class="text-2xl font-hud font-bold text-white" id="stat-total">00</div>
@@ -305,6 +309,11 @@ app.get('/status', (req, res) => {
                             <div class="micro-data mb-1 text-indigo-500">PAGOS ICAROSOFT</div>
                             <div class="text-2xl font-hud font-bold text-indigo-400" id="stat-icaro">00</div>
                         </div>
+                        <div class="bg-dark-900 border border-red-900/30 p-2 text-center relative overflow-hidden">
+        <div class="absolute -right-2 -top-2 text-red-500/10 text-4xl"><i class="fa-solid fa-triangle-exclamation"></i></div>
+        <div class="micro-data mb-1 text-red-500">RECHAZOS VIDANET</div>
+        <div class="text-2xl font-hud font-bold text-red-500" id="stat-rechazos-vidanet">00</div>
+        </div>
                         <div class="bg-dark-900 border border-dark-800 p-2 text-center">
                             <div class="micro-data mb-1 text-gray-500">TIEMPO PROMEDIO (AVG)</div>
                             <div class="text-2xl font-hud font-bold text-green-500" id="stat-avg">0.0s</div>
@@ -536,11 +545,28 @@ app.get('/status', (req, res) => {
                 const tipoFiltrado = document.getElementById('filtro-tipo-led').value;
 
                 // Actualizar Stats
-                let cVidanet = 0, cIcaro = 0, sumTime = 0;
+                let cVidanet = 0, cIcaro = 0, cRechazadosVid = 0, sumTime = 0;
                 pagosGlobal.forEach(p => {
-                    if(p.sistema === 'VIDANET') cVidanet++; else cIcaro++;
+                    // Filtrado estricto
+                    if (p.sistema === 'VIDANET') {
+                        cVidanet++;
+                    } else if (p.sistema === 'ICAROSOFT') {
+                        cIcaro++;
+                    } else if (p.sistema && p.sistema.includes('VIDANET') && p.sistema.includes('RECHAZADO')) {
+                        cRechazadosVid++;
+                    } else if (p.sistema && p.sistema.includes('ICAROSOFT') && p.sistema.includes('RECHAZADO')) {
+                        // Si en el futuro quieres trackear rechazados de Icaro, los sumas aquí
+                    }
+
                     if(p.duracion) sumTime += p.duracion;
                 });
+                
+                const totalP = pagosGlobal.length;
+                document.getElementById('stat-total').innerText = totalP.toString().padStart(2, '0');
+                document.getElementById('stat-vidanet').innerText = cVidanet.toString().padStart(2, '0');
+                document.getElementById('stat-icaro').innerText = cIcaro.toString().padStart(2, '0');
+                document.getElementById('stat-rechazos-vidanet').innerText = cRechazadosVid.toString().padStart(2, '0');
+                document.getElementById('stat-avg').innerText = totalP > 0 ? (sumTime / totalP / 1000).toFixed(1) + 's' : '0.0s';
                 const totalP = pagosGlobal.length;
                 document.getElementById('stat-total').innerText = totalP.toString().padStart(2, '0');
                 document.getElementById('stat-vidanet').innerText = cVidanet.toString().padStart(2, '0');
@@ -642,6 +668,19 @@ app.all('*', async (req, res) => {
     };
 
     log('NUEVA', `Solicitud ${req.method} ${req.path}`);
+
+    // ====================================================================
+    // 🧠 INTERCEPTOR DE CACHÉ (LECTURA A LA VELOCIDAD DE LA LUZ)
+    // ====================================================================
+    if (req.path === '/buscar-servicios' && idCliente) {
+        const cacheHit = CACHE_SERVICIOS.get(idCliente);
+        if (cacheHit && (Date.now() - cacheHit.timestamp < TIEMPO_CACHE)) {
+            const segsRestantes = Math.ceil((TIEMPO_CACHE - (Date.now() - cacheHit.timestamp)) / 1000);
+            log('EXITO', `Cache Hit. Sirviendo datos de memoria (Expira en ${segsRestantes}s)`, 'SYS', 0);
+            return res.status(200).json(cacheHit.data);
+        }
+    }
+    // ====================================================================
     
     if (req.method !== 'GET' && Object.keys(req.body).length > 0) {
         const rBody = JSON.parse(JSON.stringify(req.body)); 
@@ -833,7 +872,17 @@ app.all('*', async (req, res) => {
                         todos_activos: cantidadSuspendidos === 0
                     };
                 }
-                // ------------------------------------------
+                
+
+            // ====================================================================
+            // 💾 GUARDAR EN CACHÉ SI FUE UNA BÚSQUEDA EXITOSA
+            // ====================================================================
+            if (req.path === '/buscar-servicios' && idCliente && respuesta.status === 200) {
+                CACHE_SERVICIOS.set(idCliente, {
+                    timestamp: Date.now(),
+                    data: respuesta.data
+                });
+            }
 
                 if(respuesta.data) console.log(formatoLogConsola(`${etiqueta}Respuesta [${requestId}]`, respuesta.data));
                 
