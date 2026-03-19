@@ -296,7 +296,7 @@ app.get('/status', (req, res) => {
                 <div id="view-ledger" class="w-full h-full flex flex-col hidden">
                     <div class="grid grid-cols-2 md:grid-cols-5 gap-3 mb-4 border-b border-dark-800 pb-4">
                         <div class="bg-dark-900 border border-dark-800 p-2 text-center">
-                            <div class="micro-data mb-1 text-gray-500">TOTAL PAGOS REGISTRADOS</div>
+                            <div class="micro-data mb-1 text-gray-500">TOTAL PAGOS</div>
                             <div class="text-2xl font-hud font-bold text-white" id="stat-total">00</div>
                         </div>
                         <div class="bg-dark-900 border border-sky-900/30 p-2 text-center relative overflow-hidden">
@@ -310,12 +310,12 @@ app.get('/status', (req, res) => {
                             <div class="text-2xl font-hud font-bold text-indigo-400" id="stat-icaro">00</div>
                         </div>
                         <div class="bg-dark-900 border border-red-900/30 p-2 text-center relative overflow-hidden">
-        <div class="absolute -right-2 -top-2 text-red-500/10 text-4xl"><i class="fa-solid fa-triangle-exclamation"></i></div>
-        <div class="micro-data mb-1 text-red-500">RECHAZOS VIDANET</div>
-        <div class="text-2xl font-hud font-bold text-red-500" id="stat-rechazos-vidanet">00</div>
-        </div>
+                            <div class="absolute -right-2 -top-2 text-red-500/10 text-4xl"><i class="fa-solid fa-triangle-exclamation"></i></div>
+                            <div class="micro-data mb-1 text-red-500">RECHAZOS VIDANET</div>
+                            <div class="text-2xl font-hud font-bold text-red-500" id="stat-rechazos-vidanet">00</div>
+                        </div>
                         <div class="bg-dark-900 border border-dark-800 p-2 text-center">
-                            <div class="micro-data mb-1 text-gray-500">TIEMPO PROMEDIO (AVG)</div>
+                            <div class="micro-data mb-1 text-gray-500">TIEMPO MEDIO</div>
                             <div class="text-2xl font-hud font-bold text-green-500" id="stat-avg">0.0s</div>
                         </div>
                     </div>
@@ -546,35 +546,29 @@ app.get('/status', (req, res) => {
 
                 // Actualizar Stats
                 let cVidanet = 0, cIcaro = 0, cRechazadosVid = 0, sumTime = 0;
+                
                 pagosGlobal.forEach(p => {
-                    // Filtrado estricto
+                    // Lógica segura y precisa
                     if (p.sistema === 'VIDANET') {
                         cVidanet++;
                     } else if (p.sistema === 'ICAROSOFT') {
                         cIcaro++;
                     } else if (p.sistema && p.sistema.includes('VIDANET') && p.sistema.includes('RECHAZADO')) {
                         cRechazadosVid++;
-                    } else if (p.sistema && p.sistema.includes('ICAROSOFT') && p.sistema.includes('RECHAZADO')) {
-                        // Si en el futuro quieres trackear rechazados de Icaro, los sumas aquí
                     }
-
                     if(p.duracion) sumTime += p.duracion;
                 });
                 
+                // ASIGNACIÓN DOM CORREGIDA (Sin variables duplicadas)
                 const totalP = pagosGlobal.length;
                 document.getElementById('stat-total').innerText = totalP.toString().padStart(2, '0');
                 document.getElementById('stat-vidanet').innerText = cVidanet.toString().padStart(2, '0');
                 document.getElementById('stat-icaro').innerText = cIcaro.toString().padStart(2, '0');
                 document.getElementById('stat-rechazos-vidanet').innerText = cRechazadosVid.toString().padStart(2, '0');
                 document.getElementById('stat-avg').innerText = totalP > 0 ? (sumTime / totalP / 1000).toFixed(1) + 's' : '0.0s';
-                const totalP = pagosGlobal.length;
-                document.getElementById('stat-total').innerText = totalP.toString().padStart(2, '0');
-                document.getElementById('stat-vidanet').innerText = cVidanet.toString().padStart(2, '0');
-                document.getElementById('stat-icaro').innerText = cIcaro.toString().padStart(2, '0');
-                document.getElementById('stat-avg').innerText = totalP > 0 ? (sumTime / totalP / 1000).toFixed(1) + 's' : '0.0s';
 
                 let filtrados = pagosGlobal.filter(p => {
-                    const coincideTipo = tipoFiltrado === 'ALL' || p.sistema === tipoFiltrado;
+                    const coincideTipo = tipoFiltrado === 'ALL' || p.sistema.includes(tipoFiltrado);
                     const textoCompleto = \`\${p.cliente} \${p.reqId}\`.toLowerCase();
                     return coincideTipo && (busqueda === '' || textoCompleto.includes(busqueda));
                 });
@@ -594,16 +588,30 @@ app.get('/status', (req, res) => {
                 }
 
                 filtrados.slice((pagLed - 1) * LIMIT_LED, pagLed * LIMIT_LED).forEach(p => {
-                    const esVidanet = p.sistema === 'VIDANET';
-                    const colorSis = esVidanet ? 'text-sky-400' : 'text-indigo-400';
-                    const bgSis = esVidanet ? 'bg-sky-900/20 border-sky-400/30' : 'bg-indigo-900/20 border-indigo-400/30';
+                    // Lógica visual avanzada para la lista
+                    const esVidanet = p.sistema.includes('VIDANET');
+                    const esRechazo = p.sistema.includes('RECHAZADO');
+                    
+                    let colorSis = esVidanet ? 'text-sky-400' : 'text-indigo-400';
+                    let bgSis = esVidanet ? 'bg-sky-900/20 border-sky-400/30' : 'bg-indigo-900/20 border-indigo-400/30';
+                    let iconStatus = '<i class="fa-solid fa-check text-green-500"></i>';
+                    let bgIcon = 'bg-green-900/20 border-green-500/30';
+
+                    // Si es rechazado, lo pintamos de rojo intenso
+                    if (esRechazo) {
+                        colorSis = 'text-red-400';
+                        bgSis = 'bg-red-900/20 border-red-500/50';
+                        iconStatus = '<i class="fa-solid fa-xmark text-red-500"></i>';
+                        bgIcon = 'bg-red-900/20 border-red-500/50';
+                    }
+
                     const segs = p.duracion ? (p.duracion / 1000).toFixed(1) + 's' : 'N/A';
 
                     htmlTemp += \`
                     <div class="flex items-center justify-between border border-dark-800 bg-dark-900/50 p-2.5 hover:border-gold-500/50 transition-colors">
                         <div class="flex items-center gap-3">
-                            <div class="w-8 h-8 rounded-full bg-green-900/20 border border-green-500/30 flex items-center justify-center">
-                                <i class="fa-solid fa-check text-green-500"></i>
+                            <div class="w-8 h-8 rounded-full \${bgIcon} flex items-center justify-center">
+                                \${iconStatus}
                             </div>
                             <div>
                                 <div class="text-gold-400 font-bold tracking-widest text-sm">\${p.cliente}</div>
