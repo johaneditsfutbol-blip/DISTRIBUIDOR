@@ -24,7 +24,7 @@ const OBREROS = [
     { id: 7, url: 'https://obrero-7-5-production.up.railway.app', carga: 0, fallos: 0, activo: true, cocinandoHasta: 0, buscandoServicios: false, rwServiceId: '7adc6cb6-ffe7-42a2-9ee9-22171b5266b6', rwEnvId: ENV_PROD_ID, rwProjectName: NOMBRE_PROYECTO }
 ];
 
-const MAX_LOGS = 1000;
+const MAX_LOGS = 10000;
 let HISTORIAL = [];
 
 // --- NUEVA BÓVEDA EXCLUSIVA PARA LOS JEFES (PAGOS EXITOSOS) ---
@@ -205,6 +205,7 @@ app.post('/api/tactico/railway-webhook', async (req, res) => {
 
     const tipoEvento = type ? type.toLowerCase() : '';
 
+    // 1. Alarma de Caída Crítica
     if (tipoEvento.includes('crashed')) {
         agregarLog('SYS', 'ALERTA', `🚨 RAILWAY CRASH: Proyecto [${NOMBRE_PROYECTO}] reporta caída. Iniciando pase de lista táctico...`);
         
@@ -227,15 +228,17 @@ app.post('/api/tactico/railway-webhook', async (req, res) => {
                 }
             }
         }
-    } else if (tipoEvento.includes('success') || tipoEvento.includes('deployed') || tipoEvento.includes('restarted')) {
-        agregarLog('SYS', 'INFO', `⚡ RAILWAY: Nuevo despliegue completado en [${NOMBRE_PROYECTO}]. Verificando resucitados...`);
+    } 
+    // 2. Alarma de Éxito REAL (Fin absoluto del Despliegue)
+    else if (tipoEvento.includes('success') || tipoEvento.includes('deployed') || tipoEvento.includes('live')) {
+        agregarLog('SYS', 'INFO', `⚡ RAILWAY: Nuevo despliegue COMPLETADO en [${NOMBRE_PROYECTO}]. Verificando resucitados...`);
         
+        // Filtramos SOLO a los que sabemos que estaban muertos
         for (let obrero of OBREROS.filter(o => !o.activo)) {
             try {
                 await axios.get(`${obrero.url}/`, { timeout: 3500 });
                 
                 // 🛠️ EL ESCUDO DE CALENTAMIENTO (WARM-UP GRACE PERIOD)
-                // Le damos 30 segundos (30000ms) de inmunidad para que abra Puppeteer tranquilamente
                 agregarLog('SYS', 'EXITO', `🧟‍♂️ Obrero ${obrero.id} levantó el puerto. Iniciando calentamiento de navegadores (30s)...`);
                 obrero.activo = true;
                 obrero.fallos = 0;
