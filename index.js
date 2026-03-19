@@ -197,66 +197,55 @@ async function reiniciarObreroDesdeRailway(obrero) {
 
 // --- ADUANA DE INFRAESTRUCTURA (RAILWAY WEBHOOKS) ---
 app.post('/api/tactico/railway-webhook', async (req, res) => {
-    res.status(200).send("Recibido, control central.");
+    res.status(200).send("Recibido");
 
-    const { type, resource } = req.body;
+    const payload = req.body;
+    const tipo = payload.type;
+    const status = payload.details ? payload.details.status : '';
     
-    // Validar el payload de Railway
-    if (!resource || !resource.project || resource.project.name !== NOMBRE_PROYECTO) return;
+    // 1. Ignorar mensajes que no sean de nuestro proyecto
+    if (!payload.resource || !payload.resource.project || payload.resource.project.name !== NOMBRE_PROYECTO) return;
 
-    const tipoEvento = type ? type.toLowerCase() : '';
-    
-    // 🎯 NUEVO: Extraemos exactamente qué obrero acaba de ser afectado por el Webhook
-    const serviceId = resource.service ? resource.service.id : null;
-    const obreroEspecifico = serviceId ? OBREROS.find(o => o.rwServiceId === serviceId) : null;
+    // 2. Identificar el obrero usando la ruta exacta del JSON que viste
+    const serviceId = payload.resource.service ? payload.resource.service.id : null;
+    const obrero = serviceId ? OBREROS.find(o => o.rwServiceId === serviceId) : null;
 
-    if (tipoEvento === 'deployment.crashed') {
-        agregarLog('SYS', 'ALERTA', `🚨 RAILWAY CRASH: Proyecto reporta caída. Iniciando pase de lista táctico...`);
-        
-        for (let obrero of OBREROS) {
-            if (!obrero.activo) continue; 
-            try {
-                await axios.get(`${obrero.url}/`, { timeout: 3500 });
-            } catch (error) {
-                const statusHttp = error.response ? error.response.status : null;
-
-                if (statusHttp === 502) {
-                    agregarLog('SYS', 'ERROR', `🎯 CADÁVER CONFIRMADO: Obrero ${obrero.id} devolvió Error 502. Disparando Redeploy...`);
-                    obrero.activo = false;
-                    obrero.fallos = 99;
-                    reiniciarObreroDesdeRailway(obrero);
-                } else {
-                    obrero.fallos++;
-                    const motivo = statusHttp ? `HTTP ${statusHttp}` : 'Timeout';
-                    agregarLog('SYS', 'ALERTA', `Obrero ${obrero.id} tropezó en el pase de lista (${motivo}). Fallos: ${obrero.fallos}`);
+    // --- CASO A: MUERTE (CRASH) ---
+    if (tipo === 'Deployment.crashed') {
+        agregarLog('SYS', 'ALERTA', `🚨 RAILWAY CRASH DETECTADO. Iniciando pase de lista...`);
+        for (let o of OBREROS) {
+            if (!o.activo) continue; 
+            try { await axios.get(`${o.url}/`, { timeout: 3500 }); } 
+            catch (error) {
+                if (error.response && error.response.status === 502) {
+                    agregarLog('SYS', 'ERROR', `🎯 CADÁVER CONFIRMADO: Obrero ${o.id} (502). Redeploying...`);
+                    o.activo = false;
+                    reiniciarObreroDesdeRailway(o);
                 }
             }
         }
     } 
-    // Escuchamos ESTRICTAMENTE cuando el despliegue finaliza con éxito
-    else if (tipoEvento === 'deployment.success') {
-        agregarLog('SYS', 'INFO', `⚡ RAILWAY: Confirmación de despliegue exitoso recibida.`);
-        
-        // 1. Si Railway nos dijo exactamente qué obrero fue el que se reinició
-        if (obreroEspecifico) {
-            agregarLog('SYS', 'EXITO', `🔥 ESCUDO ACTIVADO: Obrero ${obreroEspecifico.id} listo en la nube. Calentando navegadores (40s)...`);
-            obreroEspecifico.activo = true;
-            obreroEspecifico.fallos = 0;
-            // Le metemos los 40s de fuego a la fuerza
-            obreroEspecifico.cocinandoHasta = Date.now() + 40000; 
-            obreroEspecifico.buscandoServicios = false;
-        } 
-        // 2. Si por algún motivo Railway no manda el ID, buscamos a los que sabíamos que estaban muertos
-        else {
-            for (let obrero of OBREROS.filter(o => !o.activo)) {
+    
+    // --- CASO B: RESURRECCIÓN (DEPLOYED + SUCCESS) ---
+    // Filtramos exactamente por el tipo y estatus que mandó tu webhook.site
+    else if (tipo === 'Deployment.deployed' && status === 'SUCCESS') {
+        if (obrero) {
+            agregarLog('SYS', 'EXITO', `🔥 ESCUDO PROTECTOR: Obrero ${obrero.id} desplegado. Calentando motores (40s)...`);
+            obrero.activo = true;
+            obrero.fallos = 0;
+            // Bloqueo de seguridad para que inicie sus 4 navegadores
+            obrero.cocinandoHasta = Date.now() + 40000;
+            obrero.buscandoServicios = false;
+        } else {
+            // Fallback: Si no detectamos el serviceId, barremos a los inactivos
+            for (let o of OBREROS.filter(obs => !obs.activo)) {
                 try {
-                    await axios.get(`${obrero.url}/`, { timeout: 3500 });
-                    agregarLog('SYS', 'EXITO', `🔥 ESCUDO ACTIVADO: Obrero ${obrero.id} resucitó. Calentando navegadores (40s)...`);
-                    obrero.activo = true;
-                    obrero.fallos = 0;
-                    obrero.cocinandoHasta = Date.now() + 40000; 
-                    obrero.buscandoServicios = false;
-                } catch (error) {}
+                    await axios.get(`${o.url}/`, { timeout: 3500 });
+                    agregarLog('SYS', 'EXITO', `🔥 ESCUDO PROTECTOR: Obrero ${o.id} resucitado. Calentando (40s)...`);
+                    o.activo = true;
+                    o.fallos = 0;
+                    o.cocinandoHasta = Date.now() + 40000;
+                } catch (e) {}
             }
         }
     }
