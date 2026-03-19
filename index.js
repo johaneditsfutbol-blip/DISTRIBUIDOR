@@ -11,14 +11,17 @@ app.use(express.urlencoded({ extended: true }));
 // 1. MEMORIA Y ESTADO (LA ARMADURA Y LA COLA)
 // ============================================================================
 
+const NOMBRE_PROYECTO = 'mindful-quietude';
+const ENV_PROD_ID = 'b154738b-4e07-42c5-85d5-fc0077cf0c61';
+
 const OBREROS = [
-    { id: 1, url: 'https://obrero-1-production.up.railway.app', carga: 0, fallos: 0, activo: true, cocinandoHasta: 0, buscandoServicios: false },
-    { id: 2, url: 'https://obrero-2-production.up.railway.app', carga: 0, fallos: 0, activo: true, cocinandoHasta: 0, buscandoServicios: false },
-    { id: 3, url: 'https://obrero-3-1-production.up.railway.app', carga: 0, fallos: 0, activo: true, cocinandoHasta: 0, buscandoServicios: false },
-    { id: 4, url: 'https://obrero-4-2-production.up.railway.app', carga: 0, fallos: 0, activo: true, cocinandoHasta: 0, buscandoServicios: false },
-    { id: 5, url: 'https://obrero-5-3-production.up.railway.app', carga: 0, fallos: 0, activo: true, cocinandoHasta: 0, buscandoServicios: false },
-    { id: 6, url: 'https://obrero-6-4-production.up.railway.app', carga: 0, fallos: 0, activo: true, cocinandoHasta: 0, buscandoServicios: false },
-    { id: 7, url: 'https://obrero-7-5-production.up.railway.app', carga: 0, fallos: 0, activo: true, cocinandoHasta: 0, buscandoServicios: false }
+    { id: 1, url: 'https://obrero-1-production.up.railway.app', carga: 0, fallos: 0, activo: true, cocinandoHasta: 0, buscandoServicios: false, rwServiceId: '2d95e6e3-414d-4c63-a8aa-0397e82b8336', rwEnvId: ENV_PROD_ID, rwProjectName: NOMBRE_PROYECTO },
+    { id: 2, url: 'https://obrero-2-production.up.railway.app', carga: 0, fallos: 0, activo: true, cocinandoHasta: 0, buscandoServicios: false, rwServiceId: '4c16d6ce-8b1d-4d1b-a1b5-a886e11ce6ea', rwEnvId: ENV_PROD_ID, rwProjectName: NOMBRE_PROYECTO },
+    { id: 3, url: 'https://obrero-3-1-production.up.railway.app', carga: 0, fallos: 0, activo: true, cocinandoHasta: 0, buscandoServicios: false, rwServiceId: 'fcd7a396-2606-41ad-aaec-fdcf78caf5bd', rwEnvId: ENV_PROD_ID, rwProjectName: NOMBRE_PROYECTO },
+    { id: 4, url: 'https://obrero-4-2-production.up.railway.app', carga: 0, fallos: 0, activo: true, cocinandoHasta: 0, buscandoServicios: false, rwServiceId: '7cf96869-4def-4f0d-a69b-94cc44aefb88', rwEnvId: ENV_PROD_ID, rwProjectName: NOMBRE_PROYECTO },
+    { id: 5, url: 'https://obrero-5-3-production.up.railway.app', carga: 0, fallos: 0, activo: true, cocinandoHasta: 0, buscandoServicios: false, rwServiceId: 'a340646a-9c71-4a89-8bae-6c59ff9864ae', rwEnvId: ENV_PROD_ID, rwProjectName: NOMBRE_PROYECTO },
+    { id: 6, url: 'https://obrero-6-4-production.up.railway.app', carga: 0, fallos: 0, activo: true, cocinandoHasta: 0, buscandoServicios: false, rwServiceId: '9be77316-1d28-4d0b-ad80-621c4edd13a3', rwEnvId: ENV_PROD_ID, rwProjectName: NOMBRE_PROYECTO },
+    { id: 7, url: 'https://obrero-7-5-production.up.railway.app', carga: 0, fallos: 0, activo: true, cocinandoHasta: 0, buscandoServicios: false, rwServiceId: '7adc6cb6-ffe7-42a2-9ee9-22171b5266b6', rwEnvId: ENV_PROD_ID, rwProjectName: NOMBRE_PROYECTO }
 ];
 
 const MAX_LOGS = 1000;
@@ -149,6 +152,101 @@ app.post('/api/tactico/revivir/:id', (req, res) => {
     obrero.buscandoServicios = false;
 
     res.json({ success: true, message: "Obrero resucitado." });
+});
+
+// --- EL DISPARO DE RESURRECCIÓN (API RAILWAY GRAPHQL) ---
+async function reiniciarObreroDesdeRailway(obrero) {
+    const token = process.env.RAILWAY_API_TOKEN; 
+    
+    if (!token) {
+        agregarLog('SYS', 'ERROR', `Falta RAILWAY_API_TOKEN en el .env. Imposible hacer redeploy del Obrero ${obrero.id}.`);
+        return;
+    }
+
+    agregarLog('SYS', 'INFO', `Enviando orden suprema de REDEPLOY a la API de Railway para el Obrero ${obrero.id}...`);
+
+    try {
+        const queryGraphQL = `
+            mutation serviceInstanceRedeploy($serviceId: String!, $environmentId: String!) {
+                serviceInstanceRedeploy(serviceId: $serviceId, environmentId: $environmentId)
+            }
+        `;
+
+        const respuesta = await axios.post('https://backboard.railway.com/graphql/v2', {
+            query: queryGraphQL,
+            variables: {
+                serviceId: obrero.rwServiceId,
+                environmentId: obrero.rwEnvId
+            }
+        }, {
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            }
+        });
+
+        if (respuesta.data.errors) {
+            agregarLog('SYS', 'ERROR', `Railway rechazó el redeploy: ${respuesta.data.errors[0].message}`);
+        } else {
+            agregarLog('SYS', 'INFO', `Redeploy disparado con éxito en la infraestructura para el Obrero ${obrero.id}. Esperando confirmación de la nube...`);
+        }
+    } catch (error) {
+        agregarLog('SYS', 'ERROR', `Fallo de comunicación HTTP con la API de Railway: ${error.message}`);
+    }
+}
+
+// --- ADUANA DE INFRAESTRUCTURA (RAILWAY WEBHOOKS) ---
+app.post('/api/tactico/railway-webhook', async (req, res) => {
+    res.status(200).send("Recibido, control central.");
+
+    const { type, resource } = req.body;
+    
+    if (!resource || !resource.project || resource.project.name !== NOMBRE_PROYECTO) return;
+
+    const tipoEvento = type ? type.toLowerCase() : '';
+
+    if (tipoEvento.includes('crashed')) {
+        agregarLog('SYS', 'ALERTA', `🚨 RAILWAY CRASH: Proyecto [${NOMBRE_PROYECTO}] reporta caída. Iniciando pase de lista táctico...`);
+        
+        for (let obrero of OBREROS) {
+            if (!obrero.activo) continue; 
+            try {
+                await axios.get(`${obrero.url}/`, { timeout: 3500 });
+            } catch (error) {
+                const statusHttp = error.response ? error.response.status : null;
+
+                if (statusHttp === 502) {
+                    agregarLog('SYS', 'ERROR', `🎯 CADÁVER CONFIRMADO: Obrero ${obrero.id} devolvió Error 502. Aislando y disparando Redeploy...`);
+                    obrero.activo = false;
+                    obrero.fallos = 99;
+                    reiniciarObreroDesdeRailway(obrero);
+                } else {
+                    obrero.fallos++;
+                    const motivo = statusHttp ? `HTTP ${statusHttp}` : 'Timeout';
+                    agregarLog('SYS', 'ALERTA', `Obrero ${obrero.id} tropezó en el pase de lista (${motivo}), pero no está muerto. Fallos: ${obrero.fallos}`);
+                }
+            }
+        }
+    } else if (tipoEvento.includes('success') || tipoEvento.includes('deployed') || tipoEvento.includes('restarted')) {
+        agregarLog('SYS', 'INFO', `⚡ RAILWAY: Nuevo despliegue completado en [${NOMBRE_PROYECTO}]. Verificando resucitados...`);
+        
+        for (let obrero of OBREROS.filter(o => !o.activo)) {
+            try {
+                await axios.get(`${obrero.url}/`, { timeout: 3500 });
+                
+                // 🛠️ EL ESCUDO DE CALENTAMIENTO (WARM-UP GRACE PERIOD)
+                // Le damos 30 segundos (30000ms) de inmunidad para que abra Puppeteer tranquilamente
+                agregarLog('SYS', 'EXITO', `🧟‍♂️ Obrero ${obrero.id} levantó el puerto. Iniciando calentamiento de navegadores (30s)...`);
+                obrero.activo = true;
+                obrero.fallos = 0;
+                obrero.cocinandoHasta = Date.now() + 30000; 
+                obrero.buscandoServicios = false;
+                
+            } catch (error) { 
+                // Aún no levanta el puerto, ignoramos.
+            }
+        }
+    }
 });
 
 // ============================================================================
@@ -974,6 +1072,74 @@ app.all('*', async (req, res) => {
         }
     }
 });
+
+// ============================================================================
+// 5. EL NÚCLEO AUTÓNOMO (SELF-HEALING HEARTBEAT) - "EL JAQUE MATE"
+// ============================================================================
+const INTERVALO_PATRULLAJE = 45000; // El Comandante sale a patrullar cada 45 segundos
+
+setInterval(async () => {
+    // Solo patrullamos si no hay un caos absoluto de tráfico (evita sobrecargar)
+    if (COLA_DE_ESPERA.length > 5) return; 
+
+    agregarLog('SYS', 'INFO', 'Iniciando patrullaje autónomo. Escaneando signos vitales del escuadrón...');
+    
+    for (let obrero of OBREROS) {
+        // No molestamos a los obreros que están en medio de un pago largo (Cocinando)
+        if (Date.now() < obrero.cocinandoHasta) continue;
+
+        try {
+            const inicio = Date.now();
+            // Disparamos un ping silencioso a la raíz del Obrero (o a cualquier ruta rápida)
+            await axios.get(`${obrero.url}/`, { timeout: 8000 });
+            const latencia = Date.now() - inicio;
+
+            // EL MILAGRO: Si el obrero estaba en Cuarentena/Muerto pero respondió, lo revivimos en silencio.
+            if (!obrero.activo) {
+                obrero.activo = true;
+                obrero.fallos = 0;
+                agregarLog('SYS', 'EXITO', `AUTO-RESURRECCIÓN: Obrero ${obrero.id} respondió al latido. Reintegrado a las filas.`, obrero.id, latencia);
+            }
+
+        } catch (error) {
+            // EL CASTIGO: El obrero no respondió al latido.
+            if (obrero.activo) {
+                obrero.fallos++;
+                const statusHttp = error.response ? error.response.status : null;
+                const motivo = statusHttp ? `HTTP ${statusHttp}` : 'Timeout/Network';
+                
+                agregarLog('SYS', 'ALERTA', `PATRULLAJE: Obrero ${obrero.id} no tiene pulso (${motivo}). Falla silenciosa sumada (${obrero.fallos}/2).`, obrero.id);
+                
+                // Si falla 2 latidos, el Comandante actúa preventivamente
+                if (obrero.fallos >= 2) {
+                    obrero.activo = false;
+                    
+                    if (statusHttp === 502) {
+                        // ☢️ MUERTE CEREBRAL (HARD KILL) -> Redeploy en Railway
+                        agregarLog('SYS', 'ERROR', `AUTO-PURGA: Obrero ${obrero.id} devolvió 502. Disparando REDEPLOY a la nube.`, obrero.id);
+                        reiniciarObreroDesdeRailway(obrero);
+                        // 🛑 NOTA VITAL: NO hay setTimeout aquí. Esperamos pacientemente el Webhook de 'success' de Railway para revivirlo.
+                    } else {
+                        // 🛡️ ATASCADO (SOFT KILL) -> Orden 66 interna
+                        agregarLog('SYS', 'ERROR', `AUTO-PURGA: Obrero ${obrero.id} atascado. Ejecutando Orden 66 preventiva.`, obrero.id);
+                        axios.post(`${obrero.url}/orden-66`, {}, { headers: { 'x-comandante-secret': 'IcaroSoft_Destruccion_Inminente_2026' }, timeout: 5000 }).catch(() => {});
+                        
+                        // Aquí SÍ programamos resurrección rápida porque el contenedor sigue vivo, solo le lavamos el cerebro
+                        const idParaRevivir = obrero.id;
+                        setTimeout(() => {
+                            const obj = OBREROS.find(o => o.id === idParaRevivir);
+                            if(obj) {
+                                obj.activo = true;
+                                obj.fallos = 0;
+                                agregarLog('SYS', 'INFO', `Fin de cuarentena preventiva (40s). Obrero ${idParaRevivir} limpio y resucitado.`);
+                            }
+                        }, 40000); 
+                    }
+                }
+            }
+        }
+    }
+}, INTERVALO_PATRULLAJE);
 
 const PORT = process.env.PORT || 8080;
 app.listen(PORT, () => {
