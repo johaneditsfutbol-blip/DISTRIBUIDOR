@@ -273,15 +273,25 @@ async function reiniciarObreroDesdeRailway(obrero) {
 
 // --- ⚡ EL DISPARO DE RESURRECCIÓN PARA CRONOS ---
 async function reiniciarCronosDesdeRailway(cronos) {
-    const token = process.env.RAILWAY_API_TOKEN; 
-    if (!token) return agregarLog('SYS', 'ERROR', `Falta RAILWAY_API_TOKEN. Imposible revivir a CRONOS ${cronos.nombre}.`);
+    
+    // ⚠️ CRÍTICO: Usamos el token exclusivo del proyecto Cronos, no el de los Obreros
+    const token = process.env.RAILWAY_API_TOKEN_CRONOS; 
+    
+    if (!token) return agregarLog('SYS', 'ERROR', `Falta RAILWAY_API_TOKEN_CRONOS. Imposible revivir a CRONOS ${cronos.nombre}.`);
 
     agregarLog('SYS', 'ALERTA', `☠️ Disparando misil de REDEPLOY a la API de Railway para CRONOS ${cronos.nombre}...`);
 
     try {
+        // El GraphQL exacto adaptado de tu cURL
         const queryGraphQL = `mutation { deployService(input: {serviceId: "${cronos.serviceId}"}) { id status } }`;
-        const respuesta = await axios.post('https://api.railway.app/graphql', { query: queryGraphQL }, {
-            headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
+        
+        const respuesta = await axios.post('https://api.railway.app/graphql', { 
+            query: queryGraphQL 
+        }, {
+            headers: { 
+                'Authorization': `Bearer ${token}`, 
+                'Content-Type': 'application/json' 
+            }
         });
 
         if (respuesta.data && respuesta.data.errors) {
