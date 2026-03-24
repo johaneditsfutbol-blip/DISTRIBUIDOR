@@ -60,7 +60,7 @@ async function inyectarPagoEnSupabase(reqPath, reqBody, idCliente, logFunc) {
                 referencia: d.referencia || 'SIN_REF',
                 id_deuda_pagada: d.id_deuda || '',
                 origen_reporte: 'VIDANET',
-                estado: 'APROBADO' // Vidanet nace aprobado
+                estado: 'FACTURADO' // Vidanet nace aprobado
             };
         }
 
