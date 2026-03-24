@@ -813,6 +813,179 @@ app.get('/status', (req, res) => {
     `;
     res.send(html);
 });
+
+// ============================================================================
+// 3.5. ENDPOINTS DE ALTA VELOCIDAD (SUPABASE DIRECTO)
+// ============================================================================
+
+// ⚡ 1. BÚSQUEDA DE SERVICIOS (Para la App y para Vivian)
+app.get('/buscar-servicios', async (req, res) => {
+    const inicioReloj = Date.now();
+    const idBusqueda = req.query.id || req.query.cedula;
+    const origen = req.query.origen; // Si dice 'vivian', formateamos como objeto
+    const reqId = Math.random().toString(36).substring(2, 7).toUpperCase();
+    
+    if (!idBusqueda) return res.status(400).json({ success: false, error: 'Falta ID' });
+
+    const numId = idBusqueda.replace(/\D/g, ''); // Extraemos solo números
+
+    try {
+        // A. Buscar Cliente
+        const { data: cliente } = await supabase
+            .from('clientes')
+            .select('*')
+            .ilike('documento_cliente', `%${numId}`)
+            .limit(1)
+            .single();
+
+        const docCliente = cliente ? cliente.documento_cliente : `V${numId}`;
+        const nombreCliente = cliente ? cliente.nombre_cliente : "DESCONOCIDO";
+
+        // B. Buscar Servicios
+        const { data: servicios } = await supabase
+            .from('servicios')
+            .select('*')
+            .eq('documento', docCliente);
+
+        // C. Cálculos y Mapeo
+        let deudaTotalNum = 0;
+        let cantidadSuspendidos = 0;
+
+        const arrServicios = (servicios || []).map((s, index) => {
+            // Cálculos para Vivian
+            if (s.saldo && s.saldo !== "N/A" && s.saldo !== "0,00" && s.saldo !== "0.00") {
+                let saldoNum = parseFloat(s.saldo.replace(/\./g, '').replace(',', '.'));
+                if (!isNaN(saldoNum)) deudaTotalNum += saldoNum;
+            }
+            if (s.estado && s.estado.toLowerCase().includes('suspendido')) cantidadSuspendidos++;
+
+            // Mapeo exacto que espera la App/Vivian
+            return {
+                numero_servicio: index + 1,
+                plan: s.plan || "Plan no especificado",
+                ip: s.ip_servicio || "N/A",
+                estado: s.estado || "N/A",
+                saldo: s.saldo || "0,00",
+                fecha_corte: s.fecha_corte_actual || "N/A",
+                direccion: s.direccion_servicio || "No detectada"
+            };
+        });
+
+        // D. Estructura Base de la Respuesta
+        const baseData = {
+            id_busqueda: idBusqueda,
+            nombre_cliente: nombreCliente,
+            codigo_cliente: docCliente,
+            movil: cliente ? cliente.telefono_movil : "N/A",
+            fijo: cliente ? cliente.telefono_fijo : "N/A",
+            link_pago: "https://vidanet.icarosoft.com/Login/" // Genérico estético
+        };
+
+        const duracion = Date.now() - inicioReloj;
+        agregarLog(reqId, 'EXITO', `[⚡ SPEED-API] Servicios entregados a ${origen || 'App'} (${arrServicios.length} ítems)`, 'SYS', duracion);
+
+        // E. BIFURCACIÓN: ¿Es Vivian o la App?
+        if (origen === 'vivian') {
+            const serviciosObj = {};
+            arrServicios.forEach((s, idx) => { serviciosObj[`servicio_${idx + 1}`] = s; });
+
+            return res.json({
+                success: true,
+                data: {
+                    ...baseData,
+                    servicios: serviciosObj,
+                    resumen: {
+                        total_servicios: arrServicios.length,
+                        tiene_deuda: deudaTotalNum > 0,
+                        deuda_total_usd: deudaTotalNum > 0 ? deudaTotalNum.toFixed(2).replace('.', ',') : "0,00",
+                        hay_suspendidos: cantidadSuspendidos > 0,
+                        cantidad_suspendidos: cantidadSuspendidos,
+                        todos_activos: cantidadSuspendidos === 0
+                    }
+                }
+            });
+        } else {
+            // Respuesta Array para la App
+            return res.json({ success: true, data: { ...baseData, servicios: arrServicios } });
+        }
+    } catch (error) {
+        agregarLog(reqId, 'ERROR', `[⚡ SPEED-API] Fallo en servicios: ${error.message}`, 'SYS');
+        return res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// ⚡ 2. BÚSQUEDA DE FACTURAS Y TRANSACCIONES (Para la App)
+// ⚠️ NOTA TÁCTICA: Cambia '/buscar-facturas' por el nombre exacto de la ruta que usa tu App actualmente
+app.get('/buscar-finanzas', async (req, res) => {
+    const inicioReloj = Date.now();
+    const idBusqueda = req.query.id || req.query.cedula;
+    const reqId = Math.random().toString(36).substring(2, 7).toUpperCase();
+    
+    if (!idBusqueda) return res.status(400).json({ success: false, error: 'Falta ID' });
+    const numId = idBusqueda.replace(/\D/g, '');
+
+    try {
+        // A. Buscar Cliente
+        const { data: cliente } = await supabase
+            .from('clientes')
+            .select('documento_cliente')
+            .ilike('documento_cliente', `%${numId}`)
+            .limit(1)
+            .single();
+
+        const docCliente = cliente ? cliente.documento_cliente : `V${numId}`;
+
+        // B. Buscar Facturas (Icarosoft las guarda con el cod_cliente)
+        const { data: facturas } = await supabase
+            .from('facturas')
+            .select('*')
+            .ilike('cod_cliente', `%${numId}%`)
+            .order('f_emision', { ascending: false })
+            .limit(20); // Limitamos a las 20 más recientes para que la app vuele
+
+        // C. Buscar Transacciones (Los pagos que hemos guardado nosotros)
+        const { data: transacciones } = await supabase
+            .from('registro_pagos')
+            .select('*')
+            .eq('documento_cliente', docCliente)
+            .order('fecha_pago', { ascending: false })
+            .limit(20);
+
+        // D. Mapear Formato de la App
+        const arrFacturas = (facturas || []).map(f => ({
+            numero: f.nro_control || f.nro_notificacion || f.id_ventas || "00000",
+            fecha: f.f_emision || "N/A",
+            estado: f.status || "DESCONOCIDO",
+            monto: f.total_factura || "0,00",
+            saldo: f.saldo || "0,00"
+        }));
+
+        const arrTransacciones = (transacciones || []).map(t => ({
+            tipo: t.origen_reporte || "PAGO",
+            forma: t.banco_origen || t.metodo_pago || "N/A",
+            referencia: t.referencia || "SIN_REF",
+            monto_bs: t.monto_bs ? parseFloat(t.monto_bs).toLocaleString('es-VE', { minimumFractionDigits: 2 }) : "0,00",
+            fecha: t.fecha_pago || "N/A",
+            status: t.estado || "PENDIENTE"
+        }));
+
+        const duracion = Date.now() - inicioReloj;
+        agregarLog(reqId, 'EXITO', `[⚡ SPEED-API] Facturas entregadas a App`, 'SYS', duracion);
+
+        return res.json({
+            success: true,
+            data: {
+                id: idBusqueda,
+                facturas: arrFacturas,
+                transacciones: arrTransacciones
+            }
+        });
+    } catch (error) {
+        agregarLog(reqId, 'ERROR', `[⚡ SPEED-API] Fallo en facturas: ${error.message}`, 'SYS');
+        return res.status(500).json({ success: false, error: error.message });
+    }
+});
+
 // ============================================================================
 // 4. EL CEREBRO DEL ENRUTADOR (NÚCLEO)
 // ============================================================================
