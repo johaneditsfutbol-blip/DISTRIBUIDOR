@@ -97,6 +97,12 @@ const OBREROS = [
 const MAX_LOGS = 15000;
 let HISTORIAL = [];
 
+// --- 🛸 ESCUADRÓN FANTASMA (CRONOS) ---
+const ESCUADRON_CRONOS = [
+    { nombre: 'SERVICIOS', url: 'https://servicios-production-9681.up.railway.app', serviceId: '9c7e701b-6f56-4b76-a6c7-4bc4e3ac7f3d', fallos: 0, ignorarHasta: 0 },
+    { nombre: 'FACTURAS', url: 'https://facturas-production-2ab1.up.railway.app', serviceId: 'a0bcb1ce-b45c-40e4-b2f1-367e03ca925b', fallos: 0, ignorarHasta: 0 }
+];
+
 // --- NUEVA BÓVEDA EXCLUSIVA PARA LOS JEFES (PAGOS EXITOSOS) ---
 const MAX_PAGOS = 2000;
 let PAGOS_EXITOSOS = [];
@@ -262,6 +268,31 @@ async function reiniciarObreroDesdeRailway(obrero) {
         }
     } catch (error) {
         agregarLog('SYS', 'ERROR', `Fallo de comunicación HTTP con la API de Railway: ${error.message}`);
+    }
+}
+
+// --- ⚡ EL DISPARO DE RESURRECCIÓN PARA CRONOS ---
+async function reiniciarCronosDesdeRailway(cronos) {
+    const token = process.env.RAILWAY_API_TOKEN; 
+    if (!token) return agregarLog('SYS', 'ERROR', `Falta RAILWAY_API_TOKEN. Imposible revivir a CRONOS ${cronos.nombre}.`);
+
+    agregarLog('SYS', 'ALERTA', `☠️ Disparando misil de REDEPLOY a la API de Railway para CRONOS ${cronos.nombre}...`);
+
+    try {
+        const queryGraphQL = `mutation { deployService(input: {serviceId: "${cronos.serviceId}"}) { id status } }`;
+        const respuesta = await axios.post('https://api.railway.app/graphql', { query: queryGraphQL }, {
+            headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
+        });
+
+        if (respuesta.data && respuesta.data.errors) {
+            agregarLog('SYS', 'ERROR', `Railway rechazó el redeploy de CRONOS: ${respuesta.data.errors[0].message}`);
+        } else {
+            agregarLog('SYS', 'EXITO', `🔥 REDEPLOY DISPARADO para CRONOS ${cronos.nombre}. Entrando en gracia de 4 minutos para que despierte...`);
+            // 🛑 EL PERIODO DE GRACIA: Ignoramos su pulso por 4 minutos mientras Railway reconstruye y levanta
+            cronos.ignorarHasta = Date.now() + (4 * 60 * 1000); 
+        }
+    } catch (error) {
+        agregarLog('SYS', 'ERROR', `Fallo al contactar API de Railway para CRONOS: ${error.message}`);
     }
 }
 
@@ -947,7 +978,7 @@ app.get('/buscar-finanzas', async (req, res) => {
         const { data: facturas } = await supabase
             .from('facturas')
             .select('*')
-            .ilike('cod_cliente', `%${numId}%`)
+            .or(`cod_cliente.ilike.%${numId}%,rif_fiscal.ilike.%${numId}%`)
             .order('f_emision', { ascending: false })
             .limit(20); 
 
@@ -1421,6 +1452,31 @@ setInterval(async () => {
             }
         }
     }
+
+    // --- 🫀 NUEVO: ESCANEO DE SUPERVIVENCIA CRONOS ---
+    for (let cronos of ESCUADRON_CRONOS) {
+        // Respetamos ciegamente el periodo de gracia post-redeploy
+        if (Date.now() < cronos.ignorarHasta) continue; 
+
+        try {
+            await axios.get(`${cronos.url}/`, { timeout: 10000 });
+            // Si estaba fallando pero volvió solo, lo celebramos
+            if (cronos.fallos > 0) {
+                agregarLog('SYS', 'EXITO', `CRONOS ${cronos.nombre} ha vuelto en línea por su cuenta.`);
+                cronos.fallos = 0;
+            }
+        } catch (error) {
+            cronos.fallos++;
+            agregarLog('SYS', 'ALERTA', `PATRULLAJE: CRONOS ${cronos.nombre} sin pulso HTTP (${cronos.fallos}/3 latidos fallidos).`);
+
+            // Si falla 3 latidos seguidos (aprox 2 minutos en silencio absoluto), apretamos el gatillo
+            if (cronos.fallos >= 3) {
+                reiniciarCronosDesdeRailway(cronos);
+                cronos.fallos = 0; // Se reinicia mientras cuenta el periodo de gracia
+            }
+        }
+    }
+
 }, INTERVALO_PATRULLAJE);
 
 const PORT = process.env.PORT || 8080;
