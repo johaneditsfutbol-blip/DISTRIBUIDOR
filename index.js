@@ -1,81 +1,11 @@
 const express = require('express');
 const axios = require('axios');
 const cors = require('cors');
-const { createClient } = require('@supabase/supabase-js'); // <-- EL CAÑÓN
 
 const app = express();
 app.use(cors());
-app.use(express.json({ limit: '50mb' })); // Aumentamos límite por las imágenes Base64 de Icaro
-app.use(express.urlencoded({ extended: true, limit: '50mb' }));
-
-// ============================================================================
-// 🚀 NÚCLEO DE DATOS: SUPABASE Y PERRO RASTREADOR
-// ============================================================================
-const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
-
-async function inyectarPagoEnSupabase(reqPath, reqBody, idCliente, logFunc) {
-    let documentoFinal = idCliente;
-    let payload = {};
-
-    try {
-        if (reqPath === '/pagar') {
-            // 🔍 PERRO RASTREADOR: Icaro manda solo números. Buscamos a qué letra pertenece.
-            const { data, error } = await supabase
-                .from('clientes')
-                .select('documento_cliente')
-                .ilike('documento_cliente', `%${idCliente}`) // Busca algo que termine en esos números
-                .limit(1)
-                .single();
-
-            if (data && data.documento_cliente) {
-                documentoFinal = data.documento_cliente;
-            } else {
-                // Fallback de titanio: Si el cliente no existe aún en nuestra BD, forzamos 'V' para no romper
-                documentoFinal = `V${idCliente}`; 
-            }
-
-            const d = reqBody.datos || {};
-            payload = {
-                documento_cliente: documentoFinal.toUpperCase().replace(/[^A-Z0-9]/g, ''), // Limpieza extrema
-                metodo_pago: d.tipoPago || '',
-                banco_origen: d.formaPago || '',
-                referencia: d.referencia || 'SIN_REF',
-                monto_bs: parseFloat(d.monto) || 0,
-                fecha_pago: d.fecha || '',
-                url_comprobante: d.rutaImagen || null, // Guardamos la imagen
-                direccion_reportada: d.direccion || '',
-                origen_reporte: 'ICAROSOFT',
-                estado: null // Icaro no marca estado
-            };
-
-        } else if (reqPath === '/pagar-vidanet') {
-            // 🧩 VIDANET: Armamos la cédula uniendo letra y número
-            const d = reqBody.datos || {};
-            documentoFinal = `${d.letra || 'V'}${d.cedula || idCliente}`;
-
-            payload = {
-                documento_cliente: documentoFinal.toUpperCase().replace(/[^A-Z0-9]/g, ''), // Limpieza extrema
-                metodo_pago: 'Portal Vidanet',
-                banco_origen: d.banco || '',
-                referencia: d.referencia || 'SIN_REF',
-                id_deuda_pagada: d.id_deuda || '',
-                origen_reporte: 'VIDANET',
-                estado: 'APROBADO' // Vidanet nace aprobado
-            };
-        }
-
-        // 💥 DISPARO A LA BASE DE DATOS
-        const { error: errInsert } = await supabase.from('registro_pagos').insert([payload]);
-        
-        if (errInsert) {
-            logFunc('ERROR', `Fallo al inyectar pago en Supabase: ${errInsert.message}`);
-        } else {
-            logFunc('EXITO', `Respaldado en Supabase (Ref: ${payload.referencia})`);
-        }
-    } catch (error) {
-        logFunc('ERROR', `Excepción en Perro Rastreador: ${error.message}`);
-    }
-}
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
 // ============================================================================
 // 1. MEMORIA Y ESTADO (LA ARMADURA Y LA COLA)
@@ -989,11 +919,6 @@ app.all('*', async (req, res) => {
                         reqId: requestId, tiempo: Date.now(), cliente: idCliente || 'DESCONOCIDO',
                         sistema: rMision.sistema, duracion: duracion
                     });
-
-                    // 🛰️ DESPLIEGUE A SUPABASE (El registro silencioso)
-                    // Le pasamos req.body original porque ahí viene la imagen sin censurar
-                    inyectarPagoEnSupabase(req.path, req.body, idCliente, log);
-
                 } else {
                     // Falló. ¿Es culpa del cliente o técnica?
                     const msgL = rMision.mensaje.toLowerCase();
