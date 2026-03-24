@@ -890,11 +890,12 @@ app.get('/buscar-servicios', async (req, res) => {
             movil: cliente ? cliente.telefono_movil : "N/A",
             fijo: cliente ? cliente.telefono_fijo : "N/A",
             link_pago: "https://vidanet.icarosoft.com/Login/",
-            e_mail: cliente ? cliente.e_mail : null // Nuevo dato
+            e_mail: cliente ? cliente.e_mail : null 
         };
 
         const duracion = Date.now() - inicioReloj;
-        agregarLog(reqId, 'EXITO', `[⚡ SPEED-API] Servicios entregados a ${origen || 'App'} (${arrServicios.length} ítems)`, 'SYS', duracion);
+        // 🎯 INYECCIÓN DE RADAR: Agregamos la etiqueta del cliente al log
+        agregarLog(reqId, 'EXITO', `[⚡ SPEED-API] [👤 ${idBusqueda}] Servicios entregados a ${origen || 'App'} (${arrServicios.length} ítems)`, 'SYS', duracion);
 
         if (origen === 'vivian') {
             const serviciosObj = {};
@@ -985,7 +986,8 @@ app.get('/buscar-finanzas', async (req, res) => {
             referencia: t.referencia || "SIN_REF",
             monto_bs: t.monto_bs ? parseFloat(t.monto_bs).toLocaleString('es-VE', { minimumFractionDigits: 2 }) : "0,00",
             fecha: t.fecha_pago || "N/A",
-            status: t.estado || "PENDIENTE",
+            // 🛡️ LÓGICA TÁCTICA DE ESTADO: Si tiene estado (Vidanet) lo usa. Si es Icarosoft, dice "REPORTADO".
+            status: t.estado ? t.estado : (t.origen_reporte === 'ICAROSOFT' ? 'REGISTRADO' : 'PENDIENTE'),
             
             // --- NUEVO ---
             url_comprobante: t.url_comprobante || null,
@@ -994,7 +996,8 @@ app.get('/buscar-finanzas', async (req, res) => {
         }));
 
         const duracion = Date.now() - inicioReloj;
-        agregarLog(reqId, 'EXITO', `[⚡ SPEED-API] Facturas entregadas a App`, 'SYS', duracion);
+        // 🎯 INYECCIÓN DE RADAR: Agregamos la etiqueta del cliente al log
+        agregarLog(reqId, 'EXITO', `[⚡ SPEED-API] [👤 ${idBusqueda}] Facturas entregadas a App`, 'SYS', duracion);
 
         return res.json({
             success: true,
