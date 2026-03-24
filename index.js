@@ -878,8 +878,17 @@ app.get('/buscar-servicios', async (req, res) => {
             .limit(1)
             .single();
 
-        const docCliente = cliente ? cliente.documento_cliente : `V${numId}`;
-        const nombreCliente = cliente ? cliente.nombre_cliente : "DESCONOCIDO";
+        // 🛑 BLOQUEO DE SEGURIDAD: Si no hay cliente, abortamos misión inmediatamente
+        if (!cliente) {
+            agregarLog(reqId, 'ALERTA', `[⚡ SPEED-API] [👤 ${idBusqueda}] Cliente no encontrado.`, 'SYS');
+            return res.status(404).json({ 
+                success: false, 
+                error: 'Cliente no encontrado en la base de datos. Por favor verifica los datos o contacta a soporte.' 
+            });
+        }
+
+        const docCliente = cliente.documento_cliente;
+        const nombreCliente = cliente.nombre_cliente;
 
         const { data: servicios } = await supabase
             .from('servicios')
@@ -983,7 +992,16 @@ app.get('/buscar-finanzas', async (req, res) => {
             .limit(1)
             .single();
 
-        const docCliente = cliente ? cliente.documento_cliente : `V${numId}`;
+        // 🛑 BLOQUEO DE SEGURIDAD: Si no hay cliente, abortamos misión inmediatamente
+        if (!cliente) {
+            agregarLog(reqId, 'ALERTA', `[⚡ SPEED-API] [👤 ${idBusqueda}] Cliente no encontrado (Finanzas).`, 'SYS');
+            return res.status(404).json({ 
+                success: false, 
+                error: 'No pudimos localizar tu historial. Verifica tu número de identificación.' 
+            });
+        }
+
+        const docCliente = cliente.documento_cliente;
 
         const { data: facturas } = await supabase
             .from('facturas')
