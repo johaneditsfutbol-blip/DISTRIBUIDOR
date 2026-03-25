@@ -877,15 +877,22 @@ app.get('/buscar-servicios', async (req, res) => {
 
     const numId = idBusqueda.replace(/\D/g, ''); 
 
-    try {
-        const { data: cliente } = await supabase
-            .from('clientes')
-            .select('*')
-            .ilike('documento_cliente', `%${numId}`)
-            .limit(1)
-            .single();
+        try {
+            // 🧠 CEREBRO DE ENRUTAMIENTO: ¿Es Cédula o es Teléfono de Vivian (58...)?
+            let querySupabase = supabase.from('clientes').select('*');
+            
+            if (numId.startsWith('58') && numId.length >= 11) {
+                // Modo Francotirador: Sacamos los últimos 10 dígitos para ignorar formatos raros (0412, +58, etc)
+                const telLimpio = numId.slice(-10);
+                querySupabase = querySupabase.or(`telefono_movil.ilike.%${telLimpio}%,telefono_fijo.ilike.%${telLimpio}%`);
+            } else {
+                // Modo Clásico: Búsqueda por cédula
+                querySupabase = querySupabase.ilike('documento_cliente', `%${numId}`);
+            }
 
-        // 🛑 BLOQUEO DE SEGURIDAD: Si no hay cliente, abortamos misión inmediatamente
+            const { data: cliente } = await querySupabase.limit(1).single();
+
+            // 🛑 BLOQUEO DE SEGURIDAD: Si no hay cliente, abortamos misión inmediatamente
         if (!cliente) {
             agregarLog(reqId, 'ALERTA', `[⚡ SPEED-API] [👤 ${idBusqueda}] Cliente no encontrado.`, 'SYS');
             return res.status(404).json({ 
