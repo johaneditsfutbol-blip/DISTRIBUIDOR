@@ -53,11 +53,20 @@ async function inyectarPagoEnSupabase(reqPath, reqBody, idCliente, logFunc) {
             const d = reqBody.datos || {};
             documentoFinal = `${d.letra || 'V'}${d.cedula || idCliente}`;
 
+            // ⏱️ GENERADOR AUTÓNOMO DE FECHA (Hora Caracas)
+            const hoy = new Date();
+            const dia = hoy.getDate().toString().padStart(2, '0');
+            const mes = (hoy.getMonth() + 1).toString().padStart(2, '0');
+            const anio = hoy.getFullYear();
+            const fechaGenerada = `${dia}/${mes}/${anio}`;
+
             payload = {
                 documento_cliente: documentoFinal.toUpperCase().replace(/[^A-Z0-9]/g, ''), // Limpieza extrema
                 metodo_pago: 'Portal Vidanet',
                 banco_origen: d.banco || '',
                 referencia: d.referencia || 'SIN_REF',
+                monto_bs: 0,                   // <-- INYECTADO: Autogenerado en 0 por falta de datos
+                fecha_pago: fechaGenerada,     // <-- INYECTADO: Fecha fabricada por el Comandante
                 id_deuda_pagada: d.id_deuda || '',
                 origen_reporte: 'VIDANET',
                 estado: 'FACTURADO' // Vidanet nace aprobado
