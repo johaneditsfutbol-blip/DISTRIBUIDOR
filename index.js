@@ -1060,8 +1060,11 @@ app.get('/buscar-finanzas', async (req, res) => {
 
         const arrTransacciones = (transacciones || []).map(t => ({
             // --- CLÁSICO ---
-            tipo: t.origen_reporte || "PAGO",
-            forma: t.banco_origen || t.metodo_pago || "N/A",
+            // 🎯 Ahora el "tipo" jala el método de pago real guardado en Supabase
+            tipo: t.metodo_pago || t.origen_reporte || "PAGO", 
+            
+            // 🎯 Y la "forma" muestra únicamente el banco o plataforma (ej: Binance)
+            forma: t.banco_origen || "N/A",
             referencia: t.referencia || "SIN_REF",
             monto_bs: t.monto_bs ? parseFloat(t.monto_bs).toLocaleString('es-VE', { minimumFractionDigits: 2 }) : "0,00",
             fecha: t.fecha_pago || "N/A",
