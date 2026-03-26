@@ -1037,26 +1037,38 @@ app.get('/buscar-finanzas', async (req, res) => {
             .order('fecha_pago', { ascending: false })
             .limit(20);
 
-        const arrFacturas = (facturas || []).map(f => ({
-            // --- CLÁSICO ---
-            numero: f.nro_control || f.nro_notificacion || f.id_ventas || "00000",
-            fecha: f.f_emision || "N/A",
-            estado: f.status || "DESCONOCIDO",
-            monto: f.total_factura || "0,00",
-            saldo: f.saldo || "0,00",
+        const arrFacturas = (facturas || []).map(f => {
+            // 🎯 OPERACIÓN TÁCTICA: Convertimos los textos a números puros para la suma
+            const valIva = parseFloat((f.iva || "0").toString().replace(/\./g, '').replace(',', '.')) || 0;
+            const valSub = parseFloat((f.sub_total || "0").toString().replace(/\./g, '').replace(',', '.')) || 0;
             
-            // --- NUEVO ---
-            id_ventas: f.id_ventas || null,
-            nro_fiscal: f.nro_fiscal || null,
-            descripcion: f.descripcion || null,
-            exento: f.exento || "0,00",
-            base_imp: f.base_imp || "0,00",
-            iva: f.iva || "0,00",
-            total_fact_bsd: f.total_fact_bsd || "0,00",
-            pago: f.pago || null,
-            razon_social: f.razon_social || null,
-            rif_fiscal: f.rif_fiscal || null
-        }));
+            // Sumamos y formateamos de vuelta a formato venezolano (ej: "32,76")
+            const sumaTotal = (valIva + valSub).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+            return {
+                // --- CLÁSICO ---
+                numero: f.nro_control || f.nro_notificacion || f.id_ventas || "00000",
+                fecha: f.f_emision || "N/A",
+                estado: f.status || "DESCONOCIDO",
+                
+                // 🎯 EL BLANCO FIJADO: Monto y Saldo ahora muestran la suma matemática exacta
+                monto: sumaTotal,
+                saldo: sumaTotal, 
+                
+                // --- NUEVO ---
+                id_ventas: f.id_ventas || null,
+                nro_fiscal: f.nro_fiscal || null,
+                descripcion: f.descripcion || null,
+                sub_total: f.sub_total || "0,00", 
+                exento: f.exento || "0,00",
+                base_imp: f.base_imp || "0,00",
+                iva: f.iva || "0,00",
+                total_fact_bsd: f.total_fact_bsd || "0,00",
+                pago: f.pago || null,
+                razon_social: f.razon_social || null,
+                rif_fiscal: f.rif_fiscal || null
+            };
+        });
 
         const arrTransacciones = (transacciones || []).map(t => ({
             // --- CLÁSICO ---
