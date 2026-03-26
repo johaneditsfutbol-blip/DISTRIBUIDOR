@@ -23,29 +23,32 @@ async function inyectarPagoEnSupabase(reqPath, reqBody, idCliente, logFunc) {
             const { data, error } = await supabase
                 .from('clientes')
                 .select('documento_cliente')
-                .ilike('documento_cliente', `%${idCliente}`) // Busca algo que termine en esos números
+                .ilike('documento_cliente', `%${idCliente}`)
                 .limit(1)
                 .single();
 
             if (data && data.documento_cliente) {
                 documentoFinal = data.documento_cliente;
             } else {
-                // Fallback de titanio: Si el cliente no existe aún en nuestra BD, forzamos 'V' para no romper
+                // Fallback de titanio: Si el cliente no existe aún, forzamos 'V' para no romper
                 documentoFinal = `V${idCliente}`; 
             }
 
             const d = reqBody.datos || {};
+            
+            // 🎯 ESTRUCTURA UNIFICADA: ICAROSOFT
             payload = {
-                documento_cliente: documentoFinal.toUpperCase().replace(/[^A-Z0-9]/g, ''), // Limpieza extrema
-                metodo_pago: d.tipoPago || '',
-                banco_origen: d.formaPago || '',
+                documento_cliente: documentoFinal.toUpperCase().replace(/[^A-Z0-9]/g, ''),
+                metodo_pago: d.tipoPago || 'NO_ESPECIFICADO',    // <-- Extracción de tu JSON
+                banco_origen: d.formaPago || 'NO_ESPECIFICADO',  // <-- Extracción de tu JSON
                 referencia: d.referencia || 'SIN_REF',
-                monto_bs: parseFloat(d.monto) || 0,
-                fecha_pago: d.fecha || '',
-                url_comprobante: d.rutaImagen || null, // Guardamos la imagen
-                direccion_reportada: d.direccion || '',
+                monto_bs: parseFloat(d.monto) || null,           // Si no hay monto, declaramos null
+                fecha_pago: d.fecha || null,
+                url_comprobante: d.rutaImagen || null,           
+                direccion_reportada: d.direccion || null,
+                id_deuda_pagada: null,                           // Icarosoft no envía el ID de la factura
                 origen_reporte: 'ICAROSOFT',
-                estado: null // Icaro no marca estado
+                estado: 'REGISTRADO'                             // Marcador inicial
             };
 
         } else if (reqPath === '/pagar-vidanet') {
@@ -60,16 +63,19 @@ async function inyectarPagoEnSupabase(reqPath, reqBody, idCliente, logFunc) {
             const anio = hoy.getFullYear();
             const fechaGenerada = `${dia}/${mes}/${anio}`;
 
+            // 🎯 ESTRUCTURA UNIFICADA: VIDANET
             payload = {
-                documento_cliente: documentoFinal.toUpperCase().replace(/[^A-Z0-9]/g, ''), // Limpieza extrema
+                documento_cliente: documentoFinal.toUpperCase().replace(/[^A-Z0-9]/g, ''),
                 metodo_pago: 'Portal Vidanet',
-                banco_origen: d.banco || '',
+                banco_origen: d.banco || 'NO_ESPECIFICADO',
                 referencia: d.referencia || 'SIN_REF',
-                monto_bs: 0,                   // <-- INYECTADO: Autogenerado en 0 por falta de datos
-                fecha_pago: fechaGenerada,     // <-- INYECTADO: Fecha fabricada por el Comandante
-                id_deuda_pagada: d.id_deuda || '',
+                monto_bs: null,                                  // <-- El fantasma táctico (no más ceros)
+                fecha_pago: fechaGenerada,      
+                url_comprobante: null,                           // Vidanet no envía foto
+                direccion_reportada: null,                       // Vidanet no envía dirección
+                id_deuda_pagada: d.id_deuda || null,             // NULL obligatorio si no existe
                 origen_reporte: 'VIDANET',
-                estado: 'FACTURADO' // Vidanet nace aprobado
+                estado: 'FACTURADO'                              // Vidanet nace aprobado
             };
         }
 
