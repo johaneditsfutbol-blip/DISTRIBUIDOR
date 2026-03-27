@@ -100,11 +100,9 @@ const NOMBRE_PROYECTO = 'mindful-quietude';
 const ENV_PROD_ID = 'b154738b-4e07-42c5-85d5-fc0077cf0c61';
 
 const OBREROS = [
-    { id: 1, url: 'https://obrero-2-production.up.railway.app', carga: 0, fallos: 0, activo: true, cocinandoHasta: 0, buscandoServicios: false, rwServiceId: '4c16d6ce-8b1d-4d1b-a1b5-a886e11ce6ea', rwEnvId: ENV_PROD_ID, rwProjectName: NOMBRE_PROYECTO },
-    { id: 2, url: 'https://obrero-4-2-production.up.railway.app', carga: 0, fallos: 0, activo: true, cocinandoHasta: 0, buscandoServicios: false, rwServiceId: '7cf96869-4def-4f0d-a69b-94cc44aefb88', rwEnvId: ENV_PROD_ID, rwProjectName: NOMBRE_PROYECTO },
-    { id: 3, url: 'https://obrero-5-3-production.up.railway.app', carga: 0, fallos: 0, activo: true, cocinandoHasta: 0, buscandoServicios: false, rwServiceId: 'a340646a-9c71-4a89-8bae-6c59ff9864ae', rwEnvId: ENV_PROD_ID, rwProjectName: NOMBRE_PROYECTO },
-    { id: 4, url: 'https://obrero-6-4-production.up.railway.app', carga: 0, fallos: 0, activo: true, cocinandoHasta: 0, buscandoServicios: false, rwServiceId: '9be77316-1d28-4d0b-ad80-621c4edd13a3', rwEnvId: ENV_PROD_ID, rwProjectName: NOMBRE_PROYECTO },
-    { id: 5, url: 'https://obrero-7-5-production.up.railway.app', carga: 0, fallos: 0, activo: true, cocinandoHasta: 0, buscandoServicios: false, rwServiceId: '7adc6cb6-ffe7-42a2-9ee9-22171b5266b6', rwEnvId: ENV_PROD_ID, rwProjectName: NOMBRE_PROYECTO }
+    { id: 1, url: 'https://obrero-5-3-production.up.railway.app', carga: 0, fallos: 0, activo: true, cocinandoHasta: 0, buscandoServicios: false, rwServiceId: 'a340646a-9c71-4a89-8bae-6c59ff9864ae', rwEnvId: ENV_PROD_ID, rwProjectName: NOMBRE_PROYECTO },
+    { id: 2, url: 'https://obrero-6-4-production.up.railway.app', carga: 0, fallos: 0, activo: true, cocinandoHasta: 0, buscandoServicios: false, rwServiceId: '9be77316-1d28-4d0b-ad80-621c4edd13a3', rwEnvId: ENV_PROD_ID, rwProjectName: NOMBRE_PROYECTO },
+    { id: 3, url: 'https://obrero-7-5-production.up.railway.app', carga: 0, fallos: 0, activo: true, cocinandoHasta: 0, buscandoServicios: false, rwServiceId: '7adc6cb6-ffe7-42a2-9ee9-22171b5266b6', rwEnvId: ENV_PROD_ID, rwProjectName: NOMBRE_PROYECTO }
 ];
 
 const MAX_LOGS = 15000;
