@@ -109,9 +109,11 @@ const MAX_LOGS = 15000;
 let HISTORIAL = [];
 
 // --- 🛸 ESCUADRÓN FANTASMA (CRONOS) ---
+const ENV_CRONOS_ID = 'bdf0e55e-76e7-48ae-9af3-4864fadfd05b';
+
 const ESCUADRON_CRONOS = [
-    { nombre: 'SERVICIOS', url: 'https://servicios-production-9681.up.railway.app', serviceId: '9c7e701b-6f56-4b76-a6c7-4bc4e3ac7f3d', fallos: 0, ignorarHasta: 0 },
-    { nombre: 'FACTURAS', url: 'https://facturas-production-2ab1.up.railway.app', serviceId: 'a0bcb1ce-b45c-40e4-b2f1-367e03ca925b', fallos: 0, ignorarHasta: 0 }
+    { nombre: 'SERVICIOS', url: 'https://servicios-production-9681.up.railway.app', serviceId: '9c7e701b-6f56-4b76-a6c7-4bc4e3ac7f3d', envId: ENV_CRONOS_ID, fallos: 0, ignorarHasta: 0 },
+    { nombre: 'FACTURAS', url: 'https://facturas-production-2ab1.up.railway.app', serviceId: 'a0bcb1ce-b45c-40e4-b2f1-367e03ca925b', envId: ENV_CRONOS_ID, fallos: 0, ignorarHasta: 0 }
 ];
 
 // --- NUEVA BÓVEDA EXCLUSIVA PARA LOS JEFES (PAGOS EXITOSOS) ---
@@ -282,21 +284,27 @@ async function reiniciarObreroDesdeRailway(obrero) {
     }
 }
 
-// --- ⚡ EL DISPARO DE RESURRECCIÓN PARA CRONOS (API Oficial Railway) ---
+/// --- EL DISPARO DE RESURRECCION PARA CRONOS (API Oficial V2) ---
 async function reiniciarCronosDesdeRailway(cronos) {
-    // ⚠️ CRÍTICO: Usamos el token exclusivo del proyecto Cronos
     const token = process.env.RAILWAY_API_TOKEN_CRONOS; 
     
     if (!token) return agregarLog('SYS', 'ERROR', `Falta RAILWAY_API_TOKEN_CRONOS. Imposible revivir a CRONOS ${cronos.nombre}.`);
 
-    agregarLog('SYS', 'ALERTA', `☠️ Disparando misil de REDEPLOY a la API de Railway para CRONOS ${cronos.nombre}...`);
+    agregarLog('SYS', 'ALERTA', `Disparando misil V2 a la API de Railway para CRONOS ${cronos.nombre}...`);
 
     try {
-        // 🎯 CÓDIGOS DE LANZAMIENTO AUTORIZADOS POR LA IA DE RAILWAY
-        const queryGraphQL = `mutation { deploy(serviceId: "${cronos.serviceId}") { id } }`;
+        const queryGraphQL = `
+            mutation serviceInstanceRedeploy($serviceId: String!, $environmentId: String!) {
+                serviceInstanceRedeploy(serviceId: $serviceId, environmentId: $environmentId)
+            }
+        `;
         
-        const respuesta = await axios.post('https://api.railway.app/graphql', { 
-            query: queryGraphQL 
+        const respuesta = await axios.post('https://backboard.railway.com/graphql/v2', { 
+            query: queryGraphQL,
+            variables: {
+                serviceId: cronos.serviceId,
+                environmentId: cronos.envId
+            }
         }, {
             headers: { 
                 'Authorization': `Bearer ${token}`, 
@@ -305,10 +313,9 @@ async function reiniciarCronosDesdeRailway(cronos) {
         });
 
         if (respuesta.data && respuesta.data.errors) {
-            agregarLog('SYS', 'ERROR', `Railway rechazó el redeploy de CRONOS: ${respuesta.data.errors[0].message}`);
+            agregarLog('SYS', 'ERROR', `Railway rechazo el redeploy de CRONOS: ${respuesta.data.errors[0].message}`);
         } else {
-            agregarLog('SYS', 'EXITO', `🔥 REDEPLOY DISPARADO para CRONOS ${cronos.nombre}. Entrando en gracia de 4 minutos para que despierte...`);
-            // 🛑 EL PERIODO DE GRACIA: Ignoramos su pulso por 4 minutos mientras Railway reconstruye y levanta
+            agregarLog('SYS', 'EXITO', `REDEPLOY DISPARADO para CRONOS ${cronos.nombre}. Entrando en gracia (4 min)...`);
             cronos.ignorarHasta = Date.now() + (4 * 60 * 1000); 
         }
     } catch (error) {
