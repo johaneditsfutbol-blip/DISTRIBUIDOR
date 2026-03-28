@@ -244,15 +244,14 @@ app.post('/api/tactico/revivir/:id', (req, res) => {
 });
 
 // --- EL DISPARO DE RESURRECCIÓN (API RAILWAY GRAPHQL) ---
-async function reiniciarObreroDesdeRailway(obrero) {
-    const token = process.env.RAILWAY_API_TOKEN; 
+async function reiniciarCronosDesdeRailway(cronos) {
+    const token = process.env.RAILWAY_API_TOKEN_CRONOS; 
     
-    if (!token) {
-        agregarLog('SYS', 'ERROR', `Falta RAILWAY_API_TOKEN en el .env. Imposible hacer redeploy del Obrero ${obrero.id}.`);
-        return;
-    }
+    if (!token) return agregarLog('SYS', 'ERROR', `Falta Token. Imposible revivir a CRONOS ${cronos.nombre}.`);
 
-    agregarLog('SYS', 'INFO', `Enviando orden suprema de REDEPLOY a la API de Railway para el Obrero ${obrero.id}...`);
+    // Rastreador: Imprime los primeros 5 caracteres del token para confirmar que leyó el nuevo
+    const tokenOculto = token.substring(0, 5) + '...';
+    agregarLog('SYS', 'ALERTA', `Disparando misil a backboard.railway.app para CRONOS ${cronos.nombre} (Usando Token: ${tokenOculto})`);
 
     try {
         const queryGraphQL = `
@@ -260,27 +259,32 @@ async function reiniciarObreroDesdeRailway(obrero) {
                 serviceInstanceRedeploy(serviceId: $serviceId, environmentId: $environmentId)
             }
         `;
-
-        const respuesta = await axios.post('https://backboard.railway.com/graphql/v2', {
+        
+        // El endpoint oficial y estable
+        const respuesta = await axios.post('https://backboard.railway.app/graphql/v2', { 
             query: queryGraphQL,
             variables: {
-                serviceId: obrero.rwServiceId,
-                environmentId: obrero.rwEnvId
+                serviceId: cronos.serviceId,
+                environmentId: cronos.envId
             }
         }, {
-            headers: {
-                'Authorization': `Bearer ${token}`,
-                'Content-Type': 'application/json'
+            headers: { 
+                'Authorization': `Bearer ${token}`, 
+                'Content-Type': 'application/json' 
             }
         });
 
-        if (respuesta.data.errors) {
-            agregarLog('SYS', 'ERROR', `Railway rechazó el redeploy: ${respuesta.data.errors[0].message}`);
+        // Captura de errores internos de GraphQL (El causante del Not Authorized)
+        if (respuesta.data && respuesta.data.errors) {
+            agregarLog('SYS', 'ERROR', `Railway rechazó el impacto (GraphQL Error): ${respuesta.data.errors[0].message}`);
         } else {
-            agregarLog('SYS', 'INFO', `Redeploy disparado con éxito en la infraestructura para el Obrero ${obrero.id}. Esperando confirmación de la nube...`);
+            agregarLog('SYS', 'EXITO', `REDEPLOY DISPARADO para CRONOS ${cronos.nombre}. Entrando en gracia (4 min)...`);
+            cronos.ignorarHasta = Date.now() + (4 * 60 * 1000); 
         }
     } catch (error) {
-        agregarLog('SYS', 'ERROR', `Fallo de comunicación HTTP con la API de Railway: ${error.message}`);
+        // Captura de errores de red (El causante del 404)
+        const codigoError = error.response ? error.response.status : 'Desconocido';
+        agregarLog('SYS', 'ERROR', `Fallo HTTP al contactar API de Railway: Código ${codigoError} - ${error.message}`);
     }
 }
 
