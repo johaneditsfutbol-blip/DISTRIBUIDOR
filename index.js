@@ -288,44 +288,6 @@ async function reiniciarCronosDesdeRailway(cronos) {
     }
 }
 
-/// --- EL DISPARO DE RESURRECCION PARA CRONOS (API Oficial V2) ---
-async function reiniciarCronosDesdeRailway(cronos) {
-    const token = process.env.RAILWAY_API_TOKEN_CRONOS; 
-    
-    if (!token) return agregarLog('SYS', 'ERROR', `Falta RAILWAY_API_TOKEN_CRONOS. Imposible revivir a CRONOS ${cronos.nombre}.`);
-
-    agregarLog('SYS', 'ALERTA', `Disparando misil V2 a la API de Railway para CRONOS ${cronos.nombre}...`);
-
-    try {
-        const queryGraphQL = `
-            mutation serviceInstanceRedeploy($serviceId: String!, $environmentId: String!) {
-                serviceInstanceRedeploy(serviceId: $serviceId, environmentId: $environmentId)
-            }
-        `;
-        
-        const respuesta = await axios.post('https://backboard.railway.com/graphql/v2', { 
-            query: queryGraphQL,
-            variables: {
-                serviceId: cronos.serviceId,
-                environmentId: cronos.envId
-            }
-        }, {
-            headers: { 
-                'Authorization': `Bearer ${token}`, 
-                'Content-Type': 'application/json' 
-            }
-        });
-
-        if (respuesta.data && respuesta.data.errors) {
-            agregarLog('SYS', 'ERROR', `Railway rechazo el redeploy de CRONOS: ${respuesta.data.errors[0].message}`);
-        } else {
-            agregarLog('SYS', 'EXITO', `REDEPLOY DISPARADO para CRONOS ${cronos.nombre}. Entrando en gracia (4 min)...`);
-            cronos.ignorarHasta = Date.now() + (4 * 60 * 1000); 
-        }
-    } catch (error) {
-        agregarLog('SYS', 'ERROR', `Fallo al contactar API de Railway para CRONOS: ${error.message}`);
-    }
-}
 
 // --- ADUANA DE INFRAESTRUCTURA (RAILWAY WEBHOOKS) ---
 app.post('/api/tactico/railway-webhook', async (req, res) => {
