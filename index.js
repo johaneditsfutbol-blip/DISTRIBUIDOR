@@ -79,8 +79,22 @@ async function inyectarPagoEnSupabase(reqPath, reqBody, idCliente, logFunc) {
             };
         }
 
-        // 💥 DISPARO A LA BASE DE DATOS
-        const { error: errInsert } = await supabase.from('registro_pagos').insert([payload]);
+        // 🔍 RADAR DE SUCURSAL: Buscamos a qué sede pertenece el cliente antes de registrar el pago
+        let sucursalCliente = 'PRINCIPAL'; // Valor por defecto en caso de emergencia
+        const { data: dataCli } = await supabase
+            .from('clientes')
+            .select('sucursal')
+            .eq('documento_cliente', payload.documento_cliente)
+            .single();
+        
+        if (dataCli && dataCli.sucursal) {
+            sucursalCliente = dataCli.sucursal;
+        }
+        
+        payload.sucursal = sucursalCliente; // Le pegamos la etiqueta final al pago
+
+        // 💥 DISPARO A LA BASE DE DATOS
+        const { error: errInsert } = await supabase.from('registro_pagos').insert([payload]);
         
         if (errInsert) {
             logFunc('ERROR', `Fallo al inyectar pago en Supabase: ${errInsert.message}`);
@@ -244,46 +258,59 @@ app.post('/api/tactico/revivir/:id', (req, res) => {
 });
 
 // --- EL DISPARO DE RESURRECCIÓN (API RAILWAY GRAPHQL) ---
-
-async function reiniciarCronosDesdeRailway(cronos) {
-    const token = process.env.RAILWAY_API_TOKEN_CRONOS; 
+async function reiniciarObreroDesdeRailway(obrero) {
+    const token = process.env.RAILWAY_API_TOKEN; 
     
-    if (!token) return agregarLog('SYS', 'ERROR', `Falta Token. Imposible revivir a CRONOS ${cronos.nombre}.`);
+    if (!token) {
+        agregarLog('SYS', 'ERROR', `Falta RAILWAY_API_TOKEN en el .env. Imposible hacer redeploy del Obrero ${obrero.id}.`);
+        return;
+    }
 
-    agregarLog('SYS', 'ALERTA', `☠️ Disparando misil GraphQL Oficial a Railway (.com) para CRONOS ${cronos.nombre}...`);
+    agregarLog('SYS', 'INFO', `Enviando orden suprema de REDEPLOY a la API de Railway para el Obrero ${obrero.id}...`);
 
     try {
-        // Implementación EXACTA de la documentación oficial de Railway
-        const response = await fetch("https://backboard.railway.com/graphql/v2", {
-            method: "POST",
+        const queryGraphQL = `
+            mutation serviceInstanceRedeploy($serviceId: String!, $environmentId: String!) {
+                serviceInstanceRedeploy(serviceId: $serviceId, environmentId: $environmentId)
+            }
+        `;
+
+        const respuesta = await axios.post('https://backboard.railway.com/graphql/v2', {
+            query: queryGraphQL,
+            variables: {
+                serviceId: obrero.rwServiceId,
+                environmentId: obrero.rwEnvId
+            }
+        }, {
             headers: {
-                "Authorization": `Bearer ${token}`,
-                "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-                query: `mutation serviceInstanceRedeploy($serviceId: String!, $environmentId: String!) {
-                    serviceInstanceRedeploy(serviceId: $serviceId, environmentId: $environmentId)
-                }`,
-                variables: {
-                    "serviceId": cronos.serviceId,
-                    "environmentId": cronos.envId
-                },
-            }),
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            }
         });
 
-        const data = await response.json();
-
-        // Si Railway responde correctamente pero el GraphQL internamente niega el acceso
-        if (data.errors) {
-            agregarLog('SYS', 'ERROR', `Railway rechazó el impacto (GraphQL Error): ${data.errors[0].message}`);
+        if (respuesta.data.errors) {
+            agregarLog('SYS', 'ERROR', `Railway rechazó el redeploy: ${respuesta.data.errors[0].message}`);
         } else {
-            // data.data.serviceInstanceRedeploy suele devolver un true o el ID del nuevo despliegue
-            agregarLog('SYS', 'EXITO', `🔥 REDEPLOY DISPARADO para CRONOS ${cronos.nombre}. Entrando en gracia (4 min)...`);
-            cronos.ignorarHasta = Date.now() + (4 * 60 * 1000); 
+            agregarLog('SYS', 'INFO', `Redeploy disparado con éxito en la infraestructura para el Obrero ${obrero.id}. Esperando confirmación de la nube...`);
         }
     } catch (error) {
-        agregarLog('SYS', 'ERROR', `Fallo de red al contactar Railway: ${error.message}`);
+        agregarLog('SYS', 'ERROR', `Fallo de comunicación HTTP con la API de Railway: ${error.message}`);
     }
+}
+
+// --- EL DISPARO DE RESURRECCION PARA CRONOS (KILL SWITCH DIRECTO) ---
+async function reiniciarCronosDesdeRailway(cronos) {
+    agregarLog('SYS', 'ALERTA', `☠️ Enviando orden de KILL directo al contenedor de CRONOS ${cronos.nombre}...`);
+
+    try {
+        // Disparo táctico directo a la ruta secreta del bot
+        await axios.get(`${cronos.url}/kill`, { timeout: 5000 });
+        
+        agregarLog('SYS', 'EXITO', `💥 CRONOS ${cronos.nombre} se ha auto-destruido. Railway lo levantará limpio. Entrando en gracia (4 min)...`);
+        cronos.ignorarHasta = Date.now() + (4 * 60 * 1000); 
+    } catch (error) {
+        agregarLog('SYS', 'ERROR', `Fallo al ejecutar el kill a CRONOS ${cronos.nombre}: ${error.message}`);
+    }
 }
 
 // --- ADUANA DE INFRAESTRUCTURA (RAILWAY WEBHOOKS) ---
