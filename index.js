@@ -390,19 +390,15 @@ app.get('/status', (req, res) => {
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>CX-NEXUS | Command Center</title>
         <script src="https://cdn.tailwindcss.com"></script>
-        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-        <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@300;400;500;600&family=Rajdhani:wght@400;500;600;700&display=swap" rel="stylesheet">
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
         
         <script>
             tailwind.config = {
                 theme: {
                     extend: {
-                        colors: {
-                            gold: { 400: '#F3E5AB', 500: '#D4AF37', 600: '#AA8C2C', 900: '#4A3D13' },
-                            dark: { 800: '#121212', 900: '#0A0A0A', 950: '#050505' }
-                        },
                         fontFamily: {
-                            hud: ['"Rajdhani"', 'sans-serif'],
+                            sans: ['"Inter"', 'sans-serif'],
                             mono: ['"Fira Code"', 'monospace']
                         }
                     }
@@ -410,165 +406,162 @@ app.get('/status', (req, res) => {
             }
         </script>
         <style>
-            body { background-color: #050505; color: #a1a1aa; overflow-x: hidden; }
-            .hud-panel { 
-                background: linear-gradient(145deg, #0a0a0a 0%, #050505 100%);
-                border: 1px solid #222;
-                box-shadow: inset 0 0 20px rgba(0,0,0,0.5);
-                position: relative;
-            }
-            .hud-panel::before { content: ''; position: absolute; top: -1px; left: -1px; width: 20px; height: 20px; border-top: 1px solid #D4AF37; border-left: 1px solid #D4AF37; opacity: 0.7; }
-            .hud-panel::after { content: ''; position: absolute; bottom: -1px; right: -1px; width: 20px; height: 20px; border-bottom: 1px solid #D4AF37; border-right: 1px solid #D4AF37; opacity: 0.7; }
-            .gold-glow { text-shadow: 0 0 10px rgba(212, 175, 55, 0.4); }
-            .border-glow { box-shadow: 0 0 15px rgba(212, 175, 55, 0.15); border-color: rgba(212, 175, 55, 0.4); }
-            .radar-line { width: 100%; height: 1px; background: linear-gradient(90deg, transparent, rgba(212,175,55,0.3), transparent); position: absolute; top: 0; animation: scan 4s linear infinite; pointer-events: none;}
-            @keyframes scan { 0% { top: 0; opacity: 0; } 10% { opacity: 1; } 90% { opacity: 1; } 100% { top: 100%; opacity: 0; } }
-            ::-webkit-scrollbar { width: 4px; }
-            ::-webkit-scrollbar-track { background: #050505; }
-            ::-webkit-scrollbar-thumb { background: #333; }
-            ::-webkit-scrollbar-thumb:hover { background: #D4AF37; }
-            .micro-data { font-size: 0.55rem; letter-spacing: 0.1em; color: #555; text-transform: uppercase; }
+            body { background-color: #f8fafc; color: #334155; overflow-x: hidden; }
+            ::-webkit-scrollbar { width: 6px; height: 6px; }
+            ::-webkit-scrollbar-track { background: #f1f5f9; rounded: 4px; }
+            ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+            ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
             
-            /* TABS CSS */
-            .tab-btn { transition: all 0.3s ease; }
-            .tab-active { color: #D4AF37; border-bottom: 2px solid #D4AF37; text-shadow: 0 0 8px rgba(212, 175, 55, 0.4); }
-            .tab-inactive { color: #555; border-bottom: 2px solid transparent; }
-            .tab-inactive:hover { color: #888; border-color: #333; }
+            /* TABS CSS - Minimalista corporativo */
+            .tab-btn { transition: all 0.2s ease; font-weight: 500; }
+            .tab-active { color: #2563eb; border-bottom: 2px solid #2563eb; }
+            .tab-inactive { color: #64748b; border-bottom: 2px solid transparent; }
+            .tab-inactive:hover { color: #334155; border-color: #cbd5e1; }
+            
+            .micro-data { font-size: 0.65rem; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; color: #64748b; }
+            .card-shadow { box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06); }
         </style>
     </head>
-    <body class="p-4 md:p-6 min-h-screen relative flex flex-col font-mono selection:bg-gold-500 selection:text-black">
-        <div class="fixed inset-0 z-0 pointer-events-none opacity-20" style="background-image: radial-gradient(#333 1px, transparent 1px); background-size: 30px 30px;"></div>
-        <div class="radar-line z-0"></div>
-
-        <div class="max-w-7xl mx-auto w-full relative z-10 flex-grow flex flex-col">
-            <header class="flex flex-col md:flex-row justify-between items-end mb-6 pb-4 border-b border-dark-800">
-                <div class="flex items-center gap-4 w-full md:w-auto mb-4 md:mb-0">
-                    <div class="relative w-12 h-12 flex items-center justify-center border border-gold-500/40 bg-gold-900/20">
-                        <i class="fa-solid fa-layer-group text-2xl text-gold-500 animate-pulse"></i>
-                        <div class="absolute -top-1 -right-1 w-2 h-2 bg-gold-500"></div>
+    <body class="p-4 md:p-8 min-h-screen relative flex flex-col font-sans">
+        
+        <div class="max-w-[1400px] mx-auto w-full relative z-10 flex-grow flex flex-col">
+            
+            <header class="bg-white card-shadow border border-slate-200 rounded-xl p-5 md:p-6 mb-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                <div class="flex items-center gap-4">
+                    <div class="w-12 h-12 flex items-center justify-center rounded-lg bg-blue-50 border border-blue-100 text-blue-600">
+                        <i class="fa-solid fa-network-wired text-xl"></i>
                     </div>
                     <div>
-                        <h1 class="text-3xl font-bold text-white tracking-widest font-hud gold-glow uppercase">NEXUS<span class="text-gold-500 font-light">_CORE</span></h1>
-                        <div class="flex gap-3 text-[10px] tracking-widest text-gold-600 font-hud mt-1">
-                            <span>SYS_ID: OP-77X</span> <span>|</span> <span>NODE: RAILWAY_PRD</span>
+                        <h1 class="text-2xl font-bold text-slate-800 tracking-tight">CX-NEXUS <span class="font-normal text-slate-400">| Command Center</span></h1>
+                        <div class="flex gap-3 text-xs font-medium text-slate-500 mt-1">
+                            <span>SYS_ID: OP-77X</span> 
+                            <span class="text-slate-300">•</span> 
+                            <span>NODE: RAILWAY_PRD</span>
                         </div>
                     </div>
                 </div>
 
-                <div class="flex flex-col items-end gap-2 w-full md:w-auto">
-                    <div class="flex items-center gap-4 font-hud text-xs tracking-widest">
-                        <div id="badge-cola" class="flex items-center gap-2 border border-dark-800 bg-dark-900 px-3 py-1 transition-all duration-300">
-                            <i class="fa-solid fa-server text-gray-500" id="icon-cola"></i>
-                            <span id="txt-cola" class="text-gray-500">QUEUE: 00</span>
+                <div class="flex flex-col items-start md:items-end gap-2 w-full md:w-auto bg-slate-50 p-3 rounded-lg border border-slate-100">
+                    <div class="flex items-center gap-3 text-sm font-semibold">
+                        <div id="badge-cola" class="flex items-center gap-2 border border-slate-200 bg-white px-3 py-1 rounded-md transition-all duration-300 shadow-sm">
+                            <i class="fa-solid fa-server text-slate-400" id="icon-cola"></i>
+                            <span id="txt-cola" class="text-slate-600">COLA: 0</span>
                         </div>
-                        <div class="flex items-center gap-2 border border-gold-500/30 bg-gold-900/10 px-3 py-1">
+                        <div class="flex items-center gap-2 border border-emerald-200 bg-emerald-50 px-3 py-1 rounded-md shadow-sm">
                             <span class="relative flex h-2 w-2">
-                                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-gold-400 opacity-75"></span>
-                                <span class="relative inline-flex rounded-full h-2 w-2 bg-gold-500"></span>
+                                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                                <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
                             </span>
-                            <span class="text-gold-400 font-semibold">UPLINK STABLE</span>
+                            <span class="text-emerald-700 text-xs">UPLINK ESTABLE</span>
                         </div>
                     </div>
-                    <div class="flex gap-2 text-[9px] text-gray-600 tracking-wider">
-                        <span>LATENCY: <span class="text-green-500">12ms</span></span>
+                    <div class="flex gap-3 text-[10px] font-mono text-slate-500 mt-1 w-full justify-end">
+                        <span>LATENCIA: <span class="text-emerald-600 font-semibold">12ms</span></span>
                         <span id="txt-actualizacion">SYNC: 00:00:00</span>
                     </div>
                 </div>
             </header>
             
-            <div id="grid-obreros" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mb-6"></div>
+            <div class="mb-2">
+                <h2 class="text-sm font-bold text-slate-700 uppercase tracking-wider mb-3 flex items-center gap-2">
+                    <i class="fa-solid fa-robot text-blue-500"></i> Escuadrón Activo
+                </h2>
+                <div id="grid-obreros" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mb-8"></div>
+            </div>
 
-            <div class="flex gap-6 mb-2 font-hud tracking-widest uppercase text-sm px-2">
-                <button id="btn-tab-telemetry" class="tab-btn tab-active pb-1 flex items-center gap-2" onclick="switchTab('telemetry')">
-                    <i class="fa-solid fa-satellite-dish"></i> TELEMETRY_LOG
+            <div class="flex gap-8 mb-4 px-2 border-b border-slate-200">
+                <button id="btn-tab-telemetry" class="tab-btn tab-active pb-3 flex items-center gap-2 text-sm" onclick="switchTab('telemetry')">
+                    <i class="fa-solid fa-satellite-dish"></i> Registro de Telemetría
                 </button>
-                <button id="btn-tab-ledger" class="tab-btn tab-inactive pb-1 flex items-center gap-2" onclick="switchTab('ledger')">
-                    <i class="fa-solid fa-vault"></i> PAYMENT_LEDGER
+                <button id="btn-tab-ledger" class="tab-btn tab-inactive pb-3 flex items-center gap-2 text-sm" onclick="switchTab('ledger')">
+                    <i class="fa-solid fa-vault"></i> Libro de Pagos (Ledger)
                 </button>
             </div>
 
-            <div class="hud-panel p-4 flex-grow flex flex-col relative overflow-hidden h-[450px]">
+            <div class="bg-white card-shadow border border-slate-200 rounded-xl p-5 flex-grow flex flex-col relative overflow-hidden h-[500px]">
                 
                 <div id="view-telemetry" class="w-full h-full flex flex-col">
-                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-end mb-4 pb-3 border-b border-dark-800 gap-4">
-                        <div>
-                            <span class="micro-data">MAX_BUFFER: 1000 STRINGS</span>
+                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-4">
+                        <div class="micro-data text-slate-400">
+                            BUFFER: 1000 EVENTOS
                         </div>
-                        <div class="flex gap-2 w-full sm:w-auto font-hud text-xs">
-                            <div class="relative w-full sm:w-64">
-                                <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none"><i class="fa-solid fa-magnifying-glass text-gold-600"></i></div>
-                                <input type="text" id="input-busqueda-tel" placeholder="QUERY ID / REQ..." class="bg-dark-900 border border-dark-800 text-gray-300 placeholder-gray-700 block w-full pl-8 p-1.5 focus:border-gold-500 outline-none transition-colors">
+                        <div class="flex gap-3 w-full sm:w-auto">
+                            <div class="relative w-full sm:w-72">
+                                <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                                    <i class="fa-solid fa-magnifying-glass text-slate-400"></i>
+                                </div>
+                                <input type="text" id="input-busqueda-tel" placeholder="Buscar ID, mensaje..." class="bg-slate-50 border border-slate-200 text-slate-700 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full pl-9 p-2 outline-none transition-colors">
                             </div>
-                            <select id="filtro-tipo-tel" class="bg-dark-900 border border-dark-800 text-gold-500 block w-full sm:w-32 p-1.5 outline-none cursor-pointer font-semibold">
-                                <option value="ALL">ALL_EVENTS</option>
-                                <option value="ERROR">ERRORS</option>
-                                <option value="EXITO">SUCCESS</option>
-                                <option value="COLA">QUEUED</option>
-                                <option value="INFO">INFO_TRACE</option>
+                            <select id="filtro-tipo-tel" class="bg-slate-50 border border-slate-200 text-slate-700 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full sm:w-40 p-2 outline-none font-medium cursor-pointer">
+                                <option value="ALL">Todos los eventos</option>
+                                <option value="ERROR">Errores</option>
+                                <option value="EXITO">Éxito</option>
+                                <option value="COLA">En Cola</option>
+                                <option value="INFO">Información</option>
                             </select>
                         </div>
                     </div>
-                    <div id="terminal-logs" class="overflow-y-auto flex-grow space-y-1 pr-2 mb-3"></div>
-                    <div class="flex justify-between items-center border-t border-dark-800 pt-2 font-hud tracking-widest uppercase">
-                        <span id="txt-resultados-tel" class="text-gold-500 text-xs font-bold">MATCHES: 0</span>
+                    <div id="terminal-logs" class="overflow-y-auto flex-grow space-y-2 pr-2 mb-3 bg-slate-50/50 rounded-lg p-2 border border-slate-100"></div>
+                    
+                    <div class="flex justify-between items-center border-t border-slate-200 pt-3">
+                        <span id="txt-resultados-tel" class="text-slate-500 text-xs font-semibold">COINCIDENCIAS: 0</span>
                         <div class="flex items-center gap-1">
-                            <button id="btn-prev-tel" class="w-8 h-6 bg-dark-900 text-gold-600 border border-dark-800 hover:border-gold-500 disabled:opacity-20 transition-all"><i class="fa-solid fa-caret-left"></i></button>
-                            <span id="txt-paginacion-tel" class="px-4 text-xs font-bold text-white bg-black border border-dark-800 h-6 flex items-center">1 / 1</span>
-                            <button id="btn-next-tel" class="w-8 h-6 bg-dark-900 text-gold-600 border border-dark-800 hover:border-gold-500 disabled:opacity-20 transition-all"><i class="fa-solid fa-caret-right"></i></button>
+                            <button id="btn-prev-tel" class="w-8 h-8 rounded-md bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-blue-600 disabled:opacity-30 transition-all"><i class="fa-solid fa-chevron-left"></i></button>
+                            <span id="txt-paginacion-tel" class="px-4 text-xs font-bold text-slate-700">1 / 1</span>
+                            <button id="btn-next-tel" class="w-8 h-8 rounded-md bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-blue-600 disabled:opacity-30 transition-all"><i class="fa-solid fa-chevron-right"></i></button>
                         </div>
                     </div>
                 </div>
 
                 <div id="view-ledger" class="w-full h-full flex flex-col hidden">
-                    <div class="grid grid-cols-2 md:grid-cols-5 gap-3 mb-4 border-b border-dark-800 pb-4">
-                        <div class="bg-dark-900 border border-dark-800 p-2 text-center">
-                            <div class="micro-data mb-1 text-gray-500">TOTAL PAGOS</div>
-                            <div class="text-2xl font-hud font-bold text-white" id="stat-total">00</div>
+                    <div class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-5 pb-5 border-b border-slate-100">
+                        <div class="bg-slate-50 border border-slate-200 rounded-lg p-3">
+                            <div class="micro-data mb-1 text-slate-500">TOTAL PAGOS</div>
+                            <div class="text-2xl font-bold text-slate-800" id="stat-total">00</div>
                         </div>
-                        <div class="bg-dark-900 border border-sky-900/30 p-2 text-center relative overflow-hidden">
-                            <div class="absolute -right-2 -top-2 text-sky-500/10 text-4xl"><i class="fa-solid fa-globe"></i></div>
-                            <div class="micro-data mb-1 text-sky-500">PAGOS VIDANET</div>
-                            <div class="text-2xl font-hud font-bold text-sky-400" id="stat-vidanet">00</div>
+                        <div class="bg-blue-50 border border-blue-100 rounded-lg p-3">
+                            <div class="micro-data mb-1 text-blue-600">PAGOS VIDANET</div>
+                            <div class="text-2xl font-bold text-blue-700" id="stat-vidanet">00</div>
                         </div>
-                        <div class="bg-dark-900 border border-indigo-900/30 p-2 text-center relative overflow-hidden">
-                            <div class="absolute -right-2 -top-2 text-indigo-500/10 text-4xl"><i class="fa-solid fa-building"></i></div>
-                            <div class="micro-data mb-1 text-indigo-500">PAGOS ICAROSOFT</div>
-                            <div class="text-2xl font-hud font-bold text-indigo-400" id="stat-icaro">00</div>
+                        <div class="bg-indigo-50 border border-indigo-100 rounded-lg p-3">
+                            <div class="micro-data mb-1 text-indigo-600">PAGOS ICAROSOFT</div>
+                            <div class="text-2xl font-bold text-indigo-700" id="stat-icaro">00</div>
                         </div>
-                        <div class="bg-dark-900 border border-red-900/30 p-2 text-center relative overflow-hidden">
-                            <div class="absolute -right-2 -top-2 text-red-500/10 text-4xl"><i class="fa-solid fa-triangle-exclamation"></i></div>
-                            <div class="micro-data mb-1 text-red-500">RECHAZOS VIDANET</div>
-                            <div class="text-2xl font-hud font-bold text-red-500" id="stat-rechazos-vidanet">00</div>
+                        <div class="bg-red-50 border border-red-100 rounded-lg p-3">
+                            <div class="micro-data mb-1 text-red-600">RECHAZOS (APP)</div>
+                            <div class="text-2xl font-bold text-red-700" id="stat-rechazos-vidanet">00</div>
                         </div>
-                        <div class="bg-dark-900 border border-dark-800 p-2 text-center">
-                            <div class="micro-data mb-1 text-gray-500">TIEMPO MEDIO</div>
-                            <div class="text-2xl font-hud font-bold text-green-500" id="stat-avg">0.0s</div>
+                        <div class="bg-slate-50 border border-slate-200 rounded-lg p-3">
+                            <div class="micro-data mb-1 text-slate-500">TIEMPO MEDIO</div>
+                            <div class="text-2xl font-bold text-emerald-600" id="stat-avg">0.0s</div>
                         </div>
                     </div>
 
-                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-end mb-4 gap-4">
-                        <span class="font-hud tracking-widest text-gold-500 text-sm"><i class="fa-solid fa-list-check mr-2"></i>HISTÓRICO RECIENTE</span>
-                        <div class="flex gap-2 w-full sm:w-auto font-hud text-xs">
-                            <div class="relative w-full sm:w-64">
-                                <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none"><i class="fa-solid fa-magnifying-glass text-gold-600"></i></div>
-                                <input type="text" id="input-busqueda-led" placeholder="CÉDULA / REQ ID..." class="bg-dark-900 border border-dark-800 text-gray-300 placeholder-gray-700 block w-full pl-8 p-1.5 focus:border-gold-500 outline-none">
+                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-4">
+                        <span class="font-bold text-slate-700 text-sm flex items-center gap-2"><i class="fa-solid fa-list-check text-slate-400"></i> Historial Reciente</span>
+                        <div class="flex gap-3 w-full sm:w-auto">
+                            <div class="relative w-full sm:w-72">
+                                <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                                    <i class="fa-solid fa-magnifying-glass text-slate-400"></i>
+                                </div>
+                                <input type="text" id="input-busqueda-led" placeholder="Buscar cédula, ID..." class="bg-slate-50 border border-slate-200 text-slate-700 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full pl-9 p-2 outline-none">
                             </div>
-                            <select id="filtro-tipo-led" class="bg-dark-900 border border-dark-800 text-gold-500 block w-full sm:w-32 p-1.5 outline-none cursor-pointer font-semibold">
-                                <option value="ALL">AMBOS SISTEMAS</option>
-                                <option value="VIDANET">SOLO VIDANET</option>
-                                <option value="ICAROSOFT">SOLO ICAROSOFT</option>
+                            <select id="filtro-tipo-led" class="bg-slate-50 border border-slate-200 text-slate-700 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full sm:w-40 p-2 outline-none font-medium cursor-pointer">
+                                <option value="ALL">Ambos Sistemas</option>
+                                <option value="VIDANET">Solo Vidanet</option>
+                                <option value="ICAROSOFT">Solo Icarosoft</option>
                             </select>
                         </div>
                     </div>
 
                     <div id="ledger-logs" class="overflow-y-auto flex-grow space-y-2 pr-2 mb-3"></div>
 
-                    <div class="flex justify-between items-center border-t border-dark-800 pt-2 font-hud tracking-widest uppercase">
-                        <span id="txt-resultados-led" class="text-gold-500 text-xs font-bold">MATCHES: 0</span>
+                    <div class="flex justify-between items-center border-t border-slate-200 pt-3">
+                        <span id="txt-resultados-led" class="text-slate-500 text-xs font-semibold">COINCIDENCIAS: 0</span>
                         <div class="flex items-center gap-1">
-                            <button id="btn-prev-led" class="w-8 h-6 bg-dark-900 text-gold-600 border border-dark-800 hover:border-gold-500 disabled:opacity-20 transition-all"><i class="fa-solid fa-caret-left"></i></button>
-                            <span id="txt-paginacion-led" class="px-4 text-xs font-bold text-white bg-black border border-dark-800 h-6 flex items-center">1 / 1</span>
-                            <button id="btn-next-led" class="w-8 h-6 bg-dark-900 text-gold-600 border border-dark-800 hover:border-gold-500 disabled:opacity-20 transition-all"><i class="fa-solid fa-caret-right"></i></button>
+                            <button id="btn-prev-led" class="w-8 h-8 rounded-md bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-blue-600 disabled:opacity-30 transition-all"><i class="fa-solid fa-chevron-left"></i></button>
+                            <span id="txt-paginacion-led" class="px-4 text-xs font-bold text-slate-700">1 / 1</span>
+                            <button id="btn-next-led" class="w-8 h-8 rounded-md bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-blue-600 disabled:opacity-30 transition-all"><i class="fa-solid fa-chevron-right"></i></button>
                         </div>
                     </div>
                 </div>
@@ -602,11 +595,11 @@ app.get('/status', (req, res) => {
                 const btnLed = document.getElementById('btn-tab-ledger');
                 
                 if(tab === 'telemetry') {
-                    btnTel.className = "tab-btn tab-active pb-1 flex items-center gap-2";
-                    btnLed.className = "tab-btn tab-inactive pb-1 flex items-center gap-2";
+                    btnTel.className = "tab-btn tab-active pb-3 flex items-center gap-2 text-sm";
+                    btnLed.className = "tab-btn tab-inactive pb-3 flex items-center gap-2 text-sm";
                 } else {
-                    btnTel.className = "tab-btn tab-inactive pb-1 flex items-center gap-2";
-                    btnLed.className = "tab-btn tab-active pb-1 flex items-center gap-2";
+                    btnTel.className = "tab-btn tab-inactive pb-3 flex items-center gap-2 text-sm";
+                    btnLed.className = "tab-btn tab-active pb-3 flex items-center gap-2 text-sm";
                 }
                 renderizarVistas();
             }
@@ -626,7 +619,7 @@ app.get('/status', (req, res) => {
             const formatearHora = (ms, formatoCompleto = false) => {
                 const d = new Date(ms);
                 if (formatoCompleto) {
-                    const meses = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
+                    const meses = ['ENE','FEB','MAR','ABR','MAY','JUN','JUL','AGO','SEP','OCT','NOV','DIC'];
                     return \`\${d.getDate().toString().padStart(2,'0')} \${meses[d.getMonth()]} \${d.getFullYear()} | \${d.toLocaleTimeString('en-US', { hour12: false })}\`;
                 }
                 return d.toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute:'2-digit', second:'2-digit' }) + '.' + String(d.getMilliseconds()).padStart(3, '0');
@@ -642,21 +635,21 @@ app.get('/status', (req, res) => {
                     pagosGlobal = data.pagos || [];
                     renderizarVistas();
                     
-                    // UI Cola
-                    txtCola.innerText = 'QUEUE: ' + data.encolados.toString().padStart(2, '0');
+                    // UI Cola - Tema claro
+                    txtCola.innerText = 'COLA: ' + data.encolados.toString().padStart(2, '0');
                     if (data.encolados > 0) {
-                        badgeCola.className = 'flex items-center gap-2 border border-gold-500/50 bg-gold-900/20 px-3 py-1 transition-all duration-300 border-glow';
-                        iconCola.className = 'fa-solid fa-network-wired text-gold-400 animate-pulse';
-                        txtCola.className = 'text-gold-400 font-bold';
+                        badgeCola.className = 'flex items-center gap-2 border border-amber-200 bg-amber-50 px-3 py-1 rounded-md transition-all duration-300 shadow-sm';
+                        iconCola.className = 'fa-solid fa-network-wired text-amber-500 animate-pulse';
+                        txtCola.className = 'text-amber-700 font-bold text-xs';
                     } else {
-                        badgeCola.className = 'flex items-center gap-2 border border-dark-800 bg-dark-900 px-3 py-1 transition-all duration-300';
-                        iconCola.className = 'fa-solid fa-server text-gray-600';
-                        txtCola.className = 'text-gray-600';
+                        badgeCola.className = 'flex items-center gap-2 border border-slate-200 bg-white px-3 py-1 rounded-md transition-all duration-300 shadow-sm';
+                        iconCola.className = 'fa-solid fa-server text-slate-400';
+                        txtCola.className = 'text-slate-600 font-medium text-xs';
                     }
                     
                     const ahora = new Date();
                     txtActualizacion.innerText = \`SYNC: \${ahora.toLocaleTimeString('en-US', {hour12: false})}\`;
-                    txtActualizacion.classList.replace('text-red-500', 'text-gray-600');
+                    txtActualizacion.classList.replace('text-red-500', 'text-slate-500');
                 } catch (error) {}
             }
 
@@ -672,43 +665,52 @@ app.get('/status', (req, res) => {
                     const isVivo = o.activo;
                     const isCocinando = o.cocinandoHasta > tiempoActual;
                     const segCoccion = isCocinando ? Math.ceil((o.cocinandoHasta - tiempoActual) / 1000) : 0;
-                    const bordeEstado = isVivo ? 'border-dark-800 hover:border-gold-500/30' : 'border-red-900/50 border-glow';
                     
-                    let statusIcon = isVivo ? \`<i class="fa-solid fa-check text-green-500 text-[10px]"></i> <span class="text-green-500">OPR_RDY</span>\` : \`<i class="fa-solid fa-skull text-red-500 text-[10px] animate-pulse"></i> <span class="text-red-500">QUARANTINE</span>\`;
+                    const bordeEstado = isVivo ? 'border-slate-200 shadow-sm bg-white' : 'border-red-200 bg-red-50/50 shadow-sm';
+                    let statusIcon = isVivo ? \`<i class="fa-solid fa-circle-check text-emerald-500 text-xs"></i> <span class="text-emerald-700 font-medium">Operativo</span>\` : \`<i class="fa-solid fa-triangle-exclamation text-red-500 text-xs animate-pulse"></i> <span class="text-red-700 font-semibold">Cuarentena</span>\`;
+                    
                     let opsBadges = '';
-                    if (isCocinando) opsBadges += \`<div class="border border-amber-500/30 bg-amber-900/10 text-amber-500 px-1.5 py-0.5"><i class="fa-solid fa-fire animate-pulse mr-1"></i>\${segCoccion}s</div>\`;
-                    if (o.buscandoServicios) opsBadges += \`<div class="border border-sky-500/30 bg-sky-900/10 text-sky-400 px-1.5 py-0.5"><i class="fa-solid fa-satellite-dish animate-pulse mr-1"></i>SRV</div>\`;
+                    if (isCocinando) opsBadges += \`<div class="border border-amber-200 bg-amber-50 text-amber-700 px-2 py-0.5 rounded text-[10px] font-semibold"><i class="fa-solid fa-fire animate-pulse mr-1"></i>\${segCoccion}s</div>\`;
+                    if (o.buscandoServicios) opsBadges += \`<div class="border border-sky-200 bg-sky-50 text-sky-700 px-2 py-0.5 rounded text-[10px] font-semibold"><i class="fa-solid fa-satellite-dish animate-pulse mr-1"></i>SRV</div>\`;
 
                     const porcentajeCarga = Math.min((o.carga / 10) * 100, 100);
-                    let colorBarra = o.carga > 5 ? 'bg-red-500' : (o.carga > 2 ? 'bg-amber-500' : 'bg-gold-500');
+                    let colorBarra = o.carga > 5 ? 'bg-red-500' : (o.carga > 2 ? 'bg-amber-400' : 'bg-blue-500');
+
+                    // Badge dinámico para identificar si es PRINCIPAL o TOCUYITO visualmente
+                    let tagSucursal = (o.sucursal === 'TOCUYITO') 
+                        ? \`<span class="bg-amber-100 text-amber-800 border border-amber-200 px-1.5 py-0.5 rounded text-[9px] font-bold">TOCUYITO</span>\`
+                        : \`<span class="bg-slate-100 text-slate-600 border border-slate-200 px-1.5 py-0.5 rounded text-[9px] font-bold">PRINCIPAL</span>\`;
 
                     htmlTemp += \`
-                    <div class="hud-panel p-3 border \${bordeEstado} transition-colors flex flex-col justify-between min-h-[140px]">
-                        <div class="flex justify-between items-start mb-2">
+                    <div class="p-4 border \${bordeEstado} rounded-xl transition-colors flex flex-col justify-between min-h-[160px]">
+                        <div class="flex justify-between items-start mb-3">
                             <div>
-                                <h2 class="text-lg font-bold text-gray-200 font-hud tracking-widest leading-none">WK_0\${o.id}</h2>
-                                <div class="font-hud tracking-widest text-[9px] mt-1 \${isVivo ? '' : 'gold-glow'}">\${statusIcon}</div>
+                                <h2 class="text-lg font-bold text-slate-800 tracking-tight flex items-center gap-2">WK_0\${o.id} \${tagSucursal}</h2>
+                                <div class="text-[11px] mt-1 flex items-center gap-1">\${statusIcon}</div>
                             </div>
-                            <div class="text-right">
-                                <div class="text-2xl font-light font-hud leading-none \${o.fallos > 0 ? 'text-red-500' : 'text-gray-700'}">\${o.fallos.toString().padStart(2, '0')}</div>
-                                <div class="micro-data">ERRORS</div>
+                            <div class="text-right bg-slate-50 p-2 rounded border border-slate-100">
+                                <div class="text-xl font-bold leading-none \${o.fallos > 0 ? 'text-red-500' : 'text-slate-700'}">\${o.fallos.toString().padStart(2, '0')}</div>
+                                <div class="text-[9px] font-bold text-slate-400 mt-1 uppercase tracking-wider">Errores</div>
                             </div>
                         </div>
-                        <div class="flex gap-1 mb-2 text-[8px] font-hud tracking-widest uppercase h-4">\${opsBadges}</div>
-                        <div class="mb-3">
-                            <div class="flex justify-between font-hud text-[9px] tracking-widest text-gray-500 mb-1">
-                                <span>LOAD_BAL</span><span class="text-gray-300">\${o.carga} REQ</span>
+                        
+                        <div class="flex gap-2 mb-3 h-5">\${opsBadges}</div>
+                        
+                        <div class="mb-4 bg-slate-50 p-2 rounded border border-slate-100">
+                            <div class="flex justify-between text-[10px] font-bold text-slate-500 mb-1.5 uppercase tracking-wide">
+                                <span>Carga Actual</span><span class="text-slate-700">\${o.carga} REQ</span>
                             </div>
-                            <div class="w-full bg-dark-900 border border-dark-800 h-1">
+                            <div class="w-full bg-slate-200 rounded-full h-1.5 overflow-hidden">
                                 <div class="\${colorBarra} h-full transition-all duration-500" style="width: \${porcentajeCarga}%"></div>
                             </div>
                         </div>
-                        <div class="grid grid-cols-2 gap-2 mt-auto font-hud text-[10px] tracking-widest uppercase">
-                            <button onclick="ejecutarOrden(\${o.id})" class="bg-dark-900 text-gray-500 border border-dark-800 hover:border-red-500 hover:text-red-500 py-1 transition-colors group">
-                                <i class="fa-solid fa-radiation group-hover:animate-spin"></i> PURGE
+                        
+                        <div class="grid grid-cols-2 gap-2 mt-auto text-xs font-semibold">
+                            <button onclick="ejecutarOrden(\${o.id})" class="bg-white text-slate-600 border border-slate-200 hover:bg-red-50 hover:text-red-600 hover:border-red-200 rounded-lg py-1.5 transition-colors group shadow-sm flex items-center justify-center gap-1.5">
+                                <i class="fa-solid fa-rotate-right group-hover:animate-spin"></i> Reiniciar
                             </button>
-                            <button onclick="revivir(\${o.id})" class="bg-dark-900 text-gray-500 border border-dark-800 hover:border-gold-500 hover:text-gold-400 py-1 transition-colors">
-                                <i class="fa-solid fa-bolt"></i> FORCE_UP
+                            <button onclick="revivir(\${o.id})" class="bg-white text-slate-600 border border-slate-200 hover:bg-emerald-50 hover:text-emerald-700 hover:border-emerald-200 rounded-lg py-1.5 transition-colors shadow-sm flex items-center justify-center gap-1.5">
+                                <i class="fa-solid fa-bolt"></i> Forzar ON
                             </button>
                         </div>
                     </div>\`;
@@ -730,37 +732,37 @@ app.get('/status', (req, res) => {
                 if (pagTel > totalPaginas) pagTel = totalPaginas;
 
                 document.getElementById('txt-paginacion-tel').innerText = \`\${pagTel.toString().padStart(2, '0')} / \${totalPaginas.toString().padStart(2, '0')}\`;
-                document.getElementById('txt-resultados-tel').innerText = \`MATCHES: \${logsFiltrados.length.toString().padStart(4, '0')}\`;
+                document.getElementById('txt-resultados-tel').innerText = \`COINCIDENCIAS: \${logsFiltrados.length.toString().padStart(4, '0')}\`;
                 document.getElementById('btn-prev-tel').disabled = pagTel === 1;
                 document.getElementById('btn-next-tel').disabled = pagTel === totalPaginas;
 
                 let htmlTemp = '';
                 if(logsFiltrados.length === 0) {
-                    terminal.innerHTML = '<div class="text-gray-700 italic mt-4 text-center font-hud tracking-widest text-sm">NO_DATA_FOUND // AWAITING_INPUT</div>';
+                    terminal.innerHTML = '<div class="text-slate-400 italic mt-6 text-center font-medium text-sm">No se encontraron registros.</div>';
                     return;
                 }
 
                 logsFiltrados.slice((pagTel - 1) * LIMIT_TEL, pagTel * LIMIT_TEL).forEach(log => {
-                    let colorBase = 'text-gray-400';
-                    let bgBadge = 'text-gray-500';
-                    let iconClass = 'fa-solid fa-microchip';
+                    let colorBase = 'text-slate-600';
+                    let iconClass = 'fa-solid fa-circle-info text-slate-400';
+                    let bgFondo = '';
 
-                    if (log.tipo === 'NUEVA') { bgBadge = 'text-sky-400'; iconClass = 'fa-solid fa-arrow-right-to-bracket'; }
-                    if (log.tipo === 'EXITO') { bgBadge = 'text-green-500'; iconClass = 'fa-solid fa-check-double'; colorBase = 'text-gray-300'; }
-                    if (log.tipo === 'ERROR') { bgBadge = 'text-red-500'; iconClass = 'fa-solid fa-triangle-exclamation'; colorBase = 'text-red-400'; }
-                    if (log.tipo === 'ALERTA') { bgBadge = 'text-orange-500 animate-pulse'; iconClass = 'fa-solid fa-radiation'; colorBase = 'text-orange-400'; }
-                    if (log.tipo === 'COLA') { bgBadge = 'text-indigo-400'; iconClass = 'fa-solid fa-layer-group'; colorBase = 'text-indigo-300'; }
-                    if (log.tipo === 'INFO') { bgBadge = 'text-gold-500'; iconClass = 'fa-solid fa-terminal'; colorBase = 'text-gold-100'; }
+                    if (log.tipo === 'NUEVA') { iconClass = 'fa-solid fa-arrow-right-to-bracket text-blue-500'; }
+                    if (log.tipo === 'EXITO') { iconClass = 'fa-solid fa-check-circle text-emerald-500'; colorBase = 'text-slate-700 font-medium'; bgFondo = 'bg-emerald-50/30'; }
+                    if (log.tipo === 'ERROR') { iconClass = 'fa-solid fa-circle-xmark text-red-500'; colorBase = 'text-red-700 font-medium'; bgFondo = 'bg-red-50/50'; }
+                    if (log.tipo === 'ALERTA') { iconClass = 'fa-solid fa-triangle-exclamation text-amber-500'; colorBase = 'text-amber-700 font-medium'; bgFondo = 'bg-amber-50/50'; }
+                    if (log.tipo === 'COLA') { iconClass = 'fa-solid fa-layer-group text-indigo-500'; colorBase = 'text-indigo-700'; }
+                    if (log.tipo === 'INFO') { iconClass = 'fa-solid fa-terminal text-slate-500'; }
 
-                    const duracionStr = log.duracion ? \`<span class="text-gray-600 ml-2">[\${log.duracion}ms]</span>\` : '';
-                    const obreroTag = log.obreroId !== 'SYS' ? \`<span class="text-gold-500 ml-2 border border-gold-500/20 px-1">WK_\${log.obreroId.toString().padStart(2,'0')}</span>\` : '<span class="text-gray-600 ml-2 border border-dark-800 px-1">SYS</span>';
+                    const duracionStr = log.duracion ? \`<span class="text-slate-400 ml-2 font-mono text-[10px]">[\${log.duracion}ms]</span>\` : '';
+                    const obreroTag = log.obreroId !== 'SYS' ? \`<span class="text-blue-600 ml-2 border border-blue-200 bg-blue-50 rounded px-1.5 font-bold text-[10px]">WK_\${log.obreroId.toString().padStart(2,'0')}</span>\` : '<span class="text-slate-500 ml-2 border border-slate-200 bg-white rounded px-1.5 font-bold text-[10px]">SYS</span>';
 
                     htmlTemp += \`
-                    <div class="flex items-start gap-3 p-1 hover:bg-dark-800/50 transition-colors border-l-2 border-transparent hover:border-gold-500">
-                        <div class="text-gray-600 w-24 shrink-0 mt-0.5 text-[10px] tracking-wider">\${formatearHora(log.tiempo)}</div>
-                        <div class="\${bgBadge} w-4 shrink-0 text-center mt-0.5"><i class="\${iconClass}"></i></div>
-                        <div class="text-gray-500 w-14 shrink-0 text-center mt-0.5 tracking-wider text-[10px] border border-dark-800 bg-dark-900">\${log.reqId}</div>
-                        <div class="\${colorBase} break-all flex-grow leading-snug text-[11px]">\${log.mensaje} \${obreroTag}\${duracionStr}</div>
+                    <div class="flex items-start gap-3 p-2 hover:bg-white transition-colors border-l-2 border-transparent hover:border-blue-400 rounded \${bgFondo}">
+                        <div class="text-slate-400 w-24 shrink-0 mt-0.5 text-[11px] font-mono">\${formatearHora(log.tiempo)}</div>
+                        <div class="w-5 shrink-0 text-center mt-0.5"><i class="\${iconClass}"></i></div>
+                        <div class="text-slate-600 w-16 shrink-0 text-center mt-0.5 font-mono text-[10px] font-bold bg-white border border-slate-200 rounded py-0.5">\${log.reqId}</div>
+                        <div class="\${colorBase} break-all flex-grow leading-snug text-[13px]">\${log.mensaje} \${obreroTag}\${duracionStr}</div>
                     </div>\`;
                 });
                 terminal.innerHTML = htmlTemp;
@@ -774,7 +776,6 @@ app.get('/status', (req, res) => {
                 let cVidanet = 0, cIcaro = 0, cRechazadosVid = 0, sumTime = 0;
                 
                 pagosGlobal.forEach(p => {
-                    // Lógica segura y precisa
                     if (p.sistema === 'VIDANET') {
                         cVidanet++;
                     } else if (p.sistema === 'ICAROSOFT') {
@@ -785,7 +786,6 @@ app.get('/status', (req, res) => {
                     if(p.duracion) sumTime += p.duracion;
                 });
                 
-                // ASIGNACIÓN DOM CORREGIDA (Sin variables duplicadas)
                 const totalP = pagosGlobal.length;
                 document.getElementById('stat-total').innerText = totalP.toString().padStart(2, '0');
                 document.getElementById('stat-vidanet').innerText = cVidanet.toString().padStart(2, '0');
@@ -803,50 +803,51 @@ app.get('/status', (req, res) => {
                 if (pagLed > totalPaginas) pagLed = totalPaginas;
 
                 document.getElementById('txt-paginacion-led').innerText = \`\${pagLed.toString().padStart(2, '0')} / \${totalPaginas.toString().padStart(2, '0')}\`;
-                document.getElementById('txt-resultados-led').innerText = \`MATCHES: \${filtrados.length.toString().padStart(4, '0')}\`;
+                document.getElementById('txt-resultados-led').innerText = \`COINCIDENCIAS: \${filtrados.length.toString().padStart(4, '0')}\`;
                 document.getElementById('btn-prev-led').disabled = pagLed === 1;
                 document.getElementById('btn-next-led').disabled = pagLed === totalPaginas;
 
                 let htmlTemp = '';
                 if(filtrados.length === 0) {
-                    ledger.innerHTML = '<div class="text-gray-700 italic mt-8 text-center font-hud tracking-widest text-sm">NO_PAYMENTS_REGISTERED</div>';
+                    ledger.innerHTML = '<div class="text-slate-400 italic mt-8 text-center font-medium text-sm">No hay registros de pago en memoria.</div>';
                     return;
                 }
 
                 filtrados.slice((pagLed - 1) * LIMIT_LED, pagLed * LIMIT_LED).forEach(p => {
-                    // Lógica visual avanzada para la lista
                     const esVidanet = p.sistema.includes('VIDANET');
                     const esRechazo = p.sistema.includes('RECHAZADO');
                     
-                    let colorSis = esVidanet ? 'text-sky-400' : 'text-indigo-400';
-                    let bgSis = esVidanet ? 'bg-sky-900/20 border-sky-400/30' : 'bg-indigo-900/20 border-indigo-400/30';
-                    let iconStatus = '<i class="fa-solid fa-check text-green-500"></i>';
-                    let bgIcon = 'bg-green-900/20 border-green-500/30';
+                    let colorSis = esVidanet ? 'text-blue-700 bg-blue-50 border-blue-200' : 'text-indigo-700 bg-indigo-50 border-indigo-200';
+                    let iconStatus = '<i class="fa-solid fa-check text-emerald-500"></i>';
+                    let bgIcon = 'bg-emerald-50 border border-emerald-100 shadow-sm';
 
-                    // Si es rechazado, lo pintamos de rojo intenso
                     if (esRechazo) {
-                        colorSis = 'text-red-400';
-                        bgSis = 'bg-red-900/20 border-red-500/50';
+                        colorSis = 'text-red-700 bg-red-50 border-red-200';
                         iconStatus = '<i class="fa-solid fa-xmark text-red-500"></i>';
-                        bgIcon = 'bg-red-900/20 border-red-500/50';
+                        bgIcon = 'bg-red-50 border border-red-100 shadow-sm';
                     }
 
                     const segs = p.duracion ? (p.duracion / 1000).toFixed(1) + 's' : 'N/A';
+                    
+                    // 🎨 EL PINTOR TÁCTICO CORPORATIVO: Insignias de sucursal
+                    const badgeSucursal = (p.sucursal === 'TOCUYITO') 
+                        ? '<span class="bg-amber-100 text-amber-800 border border-amber-200 px-2 py-0.5 ml-2 rounded text-[10px] font-bold align-middle">TOCUYITO</span>' 
+                        : '<span class="bg-emerald-100 text-emerald-800 border border-emerald-200 px-2 py-0.5 ml-2 rounded text-[10px] font-bold align-middle">PRINCIPAL</span>';
 
                     htmlTemp += \`
-                    <div class="flex items-center justify-between border border-dark-800 bg-dark-900/50 p-2.5 hover:border-gold-500/50 transition-colors">
-                        <div class="flex items-center gap-3">
-                            <div class="w-8 h-8 rounded-full \${bgIcon} flex items-center justify-center">
+                    <div class="flex items-center justify-between border border-slate-200 bg-white rounded-lg p-3 hover:shadow-md hover:border-blue-300 transition-all mb-2">
+                        <div class="flex items-center gap-4">
+                            <div class="w-10 h-10 rounded-full \${bgIcon} flex items-center justify-center text-lg">
                                 \${iconStatus}
                             </div>
                             <div>
-                                <div class="text-gold-400 font-bold tracking-widest text-sm">\${p.cliente}</div>
-                                <div class="micro-data text-gray-500 mt-0.5">\${formatearHora(p.tiempo, true)} | REQ: \${p.reqId}</div>
+                                <div class="text-slate-800 font-bold text-sm flex items-center">\${p.cliente} \${badgeSucursal}</div>
+                                <div class="text-xs font-mono text-slate-500 mt-1">\${formatearHora(p.tiempo, true)} <span class="text-slate-300 mx-1">|</span> REQ: <span class="font-bold text-slate-600">\${p.reqId}</span></div>
                             </div>
                         </div>
                         <div class="text-right">
-                            <div class="\${colorSis} text-[10px] font-bold border \${bgSis} px-1.5 py-0.5 rounded-sm inline-block">\${p.sistema}</div>
-                            <div class="micro-data text-gray-500 mt-1 font-mono">TIME: <span class="text-gray-300">\${segs}</span></div>
+                            <div class="\${colorSis} border px-2 py-1 rounded text-[10px] font-bold inline-block">\${p.sistema}</div>
+                            <div class="text-[10px] font-mono text-slate-400 mt-1.5 font-medium">TIEMPO: <span class="text-slate-600 font-bold">\${segs}</span></div>
                         </div>
                     </div>\`;
                 });
@@ -854,7 +855,7 @@ app.get('/status', (req, res) => {
             }
 
             async function ejecutarOrden(id) {
-                if(!confirm(\`WARNING: INIT PURGE PROTOCOL ON WORKER_\${id}? (Destroys container)\`)) return;
+                if(!confirm(\`ATENCIÓN: ¿Forzar reinicio del WORKER_\${id}? (Esto destruirá el contenedor actual)\`)) return;
                 try { await fetch(\`/api/tactico/estado\`); await fetch(\`/api/tactico/orden66/\${id}\`, { method: 'POST' }); } catch(e) {}
             }
             async function revivir(id) {
@@ -1294,9 +1295,9 @@ app.all('*', async (req, res) => {
                 if (rMision.exito) {
                     log('EXITO', `Misión completada: ${rMision.mensaje}`, obreroElegido.id, duracion);
                     PAGOS_EXITOSOS.unshift({
-                        reqId: requestId, tiempo: Date.now(), cliente: idCliente || 'DESCONOCIDO',
-                        sistema: rMision.sistema, duracion: duracion
-                    });
+                        reqId: requestId, tiempo: Date.now(), cliente: idCliente || 'DESCONOCIDO',
+                        sistema: rMision.sistema, duracion: duracion, sucursal: sucursalRequerida
+                    });
 
                     // 🛰️ DESPLIEGUE A SUPABASE (El registro silencioso)
                     // Le pasamos req.body original porque ahí viene la imagen sin censurar
@@ -1310,9 +1311,9 @@ app.all('*', async (req, res) => {
                     if (esCulpaCliente) {
                         log('ALERTA', `Rechazado (Cliente): ${rMision.mensaje}`, obreroElegido.id, duracion);
                         PAGOS_EXITOSOS.unshift({
-                            reqId: requestId, tiempo: Date.now(), cliente: idCliente || 'DESCONOCIDO',
-                            sistema: `${rMision.sistema} (RECHAZADO)`, duracion: duracion
-                        });
+                            reqId: requestId, tiempo: Date.now(), cliente: idCliente || 'DESCONOCIDO',
+                            sistema: `${rMision.sistema} (RECHAZADO)`, duracion: duracion, sucursal: sucursalRequerida
+                        });
                         // Como es culpa del cliente, NO reintentamos. Se termina la misión.
                     } else {
                         // Error técnico. Lanzamos error para que el bloque 'catch' lo atrape y reasigne el pago
