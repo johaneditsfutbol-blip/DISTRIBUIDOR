@@ -120,9 +120,9 @@ const OBREROS = [
     { id: 3, url: 'https://obrero-7-5-production.up.railway.app', carga: 0, fallos: 0, activo: true, cocinandoHasta: 0, buscandoServicios: false, rwServiceId: '7adc6cb6-ffe7-42a2-9ee9-22171b5266b6', rwEnvId: ENV_PROD_ID, rwProjectName: NOMBRE_PROYECTO, sucursal: 'PRINCIPAL' },
     
     // ⚔️ ESCUADRÓN TOCUYITO (Añade aquí sus IDs y URLs reales cuando los crees)
-    { id: 4, url: 'obrero-1-production.up.railway.app', carga: 0, fallos: 0, activo: true, cocinandoHasta: 0, buscandoServicios: false, rwServiceId: '2d95e6e3-414d-4c63-a8aa-0397e82b8336', rwEnvId: ENV_PROD_ID, rwProjectName: NOMBRE_PROYECTO, sucursal: 'TOCUYITO' },
-    { id: 5, url: 'obrero-3-1-production.up.railway.app', carga: 0, fallos: 0, activo: true, cocinandoHasta: 0, buscandoServicios: false, rwServiceId: 'fcd7a396-2606-41ad-aaec-fdcf78caf5bd', rwEnvId: ENV_PROD_ID, rwProjectName: NOMBRE_PROYECTO, sucursal: 'TOCUYITO' },
-    { id: 6, url: 'obrero-2-production.up.railway.app', carga: 0, fallos: 0, activo: true, cocinandoHasta: 0, buscandoServicios: false, rwServiceId: '4c16d6ce-8b1d-4d1b-a1b5-a886e11ce6ea', rwEnvId: ENV_PROD_ID, rwProjectName: NOMBRE_PROYECTO, sucursal: 'TOCUYITO' }
+    { id: 4, url: 'https://obrero-1-production.up.railway.app', carga: 0, fallos: 0, activo: true, cocinandoHasta: 0, buscandoServicios: false, rwServiceId: '2d95e6e3-414d-4c63-a8aa-0397e82b8336', rwEnvId: ENV_PROD_ID, rwProjectName: NOMBRE_PROYECTO, sucursal: 'TOCUYITO' },
+    { id: 5, url: 'https://obrero-3-1-production.up.railway.app', carga: 0, fallos: 0, activo: true, cocinandoHasta: 0, buscandoServicios: false, rwServiceId: 'fcd7a396-2606-41ad-aaec-fdcf78caf5bd', rwEnvId: ENV_PROD_ID, rwProjectName: NOMBRE_PROYECTO, sucursal: 'TOCUYITO' },
+    { id: 6, url: 'https://obrero-2-production.up.railway.app', carga: 0, fallos: 0, activo: true, cocinandoHasta: 0, buscandoServicios: false, rwServiceId: '4c16d6ce-8b1d-4d1b-a1b5-a886e11ce6ea', rwEnvId: ENV_PROD_ID, rwProjectName: NOMBRE_PROYECTO, sucursal: 'TOCUYITO' }
 ];
 
 const MAX_LOGS = 15000;
@@ -134,8 +134,8 @@ const ENV_CRONOS_ID = 'bdf0e55e-76e7-48ae-9af3-4864fadfd05b';
 const ESCUADRON_CRONOS = [
     { nombre: 'SERVICIOS-PRINCIPAL', url: 'https://servicios-production-9681.up.railway.app', fallos: 0, ignorarHasta: 0 },
     { nombre: 'FACTURAS-PRINCIPAL', url: 'https://facturas-production-2ab1.up.railway.app', fallos: 0, ignorarHasta: 0 },
-    { nombre: 'SERVICIOS-TOCUYITO', url: 'servicios-tocuyito-production.up.railway.app', fallos: 0, ignorarHasta: 0 },
-    { nombre: 'FACTURAS-TOCUYITO', url: 'facturas-tocuyito-production.up.railway.app', fallos: 0, ignorarHasta: 0 }
+    { nombre: 'SERVICIOS-TOCUYITO', url: 'https://servicios-tocuyito-production.up.railway.app', fallos: 0, ignorarHasta: 0 },
+    { nombre: 'FACTURAS-TOCUYITO', url: 'https://facturas-tocuyito-production.up.railway.app', fallos: 0, ignorarHasta: 0 }
 ];
 
 // --- NUEVA BÓVEDA EXCLUSIVA PARA LOS JEFES (PAGOS EXITOSOS) ---
