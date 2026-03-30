@@ -114,9 +114,15 @@ const NOMBRE_PROYECTO = 'mindful-quietude';
 const ENV_PROD_ID = 'b154738b-4e07-42c5-85d5-fc0077cf0c61';
 
 const OBREROS = [
-    { id: 1, url: 'https://obrero-5-3-production.up.railway.app', carga: 0, fallos: 0, activo: true, cocinandoHasta: 0, buscandoServicios: false, rwServiceId: 'a340646a-9c71-4a89-8bae-6c59ff9864ae', rwEnvId: ENV_PROD_ID, rwProjectName: NOMBRE_PROYECTO },
-    { id: 2, url: 'https://obrero-6-4-production.up.railway.app', carga: 0, fallos: 0, activo: true, cocinandoHasta: 0, buscandoServicios: false, rwServiceId: '9be77316-1d28-4d0b-ad80-621c4edd13a3', rwEnvId: ENV_PROD_ID, rwProjectName: NOMBRE_PROYECTO },
-    { id: 3, url: 'https://obrero-7-5-production.up.railway.app', carga: 0, fallos: 0, activo: true, cocinandoHasta: 0, buscandoServicios: false, rwServiceId: '7adc6cb6-ffe7-42a2-9ee9-22171b5266b6', rwEnvId: ENV_PROD_ID, rwProjectName: NOMBRE_PROYECTO }
+    // 🛡️ ESCUADRÓN PRINCIPAL
+    { id: 1, url: 'https://obrero-5-3-production.up.railway.app', carga: 0, fallos: 0, activo: true, cocinandoHasta: 0, buscandoServicios: false, rwServiceId: 'a340646a-9c71-4a89-8bae-6c59ff9864ae', rwEnvId: ENV_PROD_ID, rwProjectName: NOMBRE_PROYECTO, sucursal: 'PRINCIPAL' },
+    { id: 2, url: 'https://obrero-6-4-production.up.railway.app', carga: 0, fallos: 0, activo: true, cocinandoHasta: 0, buscandoServicios: false, rwServiceId: '9be77316-1d28-4d0b-ad80-621c4edd13a3', rwEnvId: ENV_PROD_ID, rwProjectName: NOMBRE_PROYECTO, sucursal: 'PRINCIPAL' },
+    { id: 3, url: 'https://obrero-7-5-production.up.railway.app', carga: 0, fallos: 0, activo: true, cocinandoHasta: 0, buscandoServicios: false, rwServiceId: '7adc6cb6-ffe7-42a2-9ee9-22171b5266b6', rwEnvId: ENV_PROD_ID, rwProjectName: NOMBRE_PROYECTO, sucursal: 'PRINCIPAL' },
+    
+    // ⚔️ ESCUADRÓN TOCUYITO (Añade aquí sus IDs y URLs reales cuando los crees)
+    { id: 4, url: 'obrero-1-production.up.railway.app', carga: 0, fallos: 0, activo: true, cocinandoHasta: 0, buscandoServicios: false, rwServiceId: '2d95e6e3-414d-4c63-a8aa-0397e82b8336', rwEnvId: ENV_PROD_ID, rwProjectName: NOMBRE_PROYECTO, sucursal: 'TOCUYITO' },
+    { id: 5, url: 'obrero-3-1-production.up.railway.app', carga: 0, fallos: 0, activo: true, cocinandoHasta: 0, buscandoServicios: false, rwServiceId: 'fcd7a396-2606-41ad-aaec-fdcf78caf5bd', rwEnvId: ENV_PROD_ID, rwProjectName: NOMBRE_PROYECTO, sucursal: 'TOCUYITO' },
+    { id: 6, url: 'obrero-2-production.up.railway.app', carga: 0, fallos: 0, activo: true, cocinandoHasta: 0, buscandoServicios: false, rwServiceId: '4c16d6ce-8b1d-4d1b-a1b5-a886e11ce6ea', rwEnvId: ENV_PROD_ID, rwProjectName: NOMBRE_PROYECTO, sucursal: 'TOCUYITO' }
 ];
 
 const MAX_LOGS = 15000;
@@ -126,8 +132,10 @@ let HISTORIAL = [];
 const ENV_CRONOS_ID = 'bdf0e55e-76e7-48ae-9af3-4864fadfd05b';
 
 const ESCUADRON_CRONOS = [
-    { nombre: 'SERVICIOS', url: 'https://servicios-production-9681.up.railway.app', serviceId: '9c7e701b-6f56-4b76-a6c7-4bc4e3ac7f3d', envId: ENV_CRONOS_ID, fallos: 0, ignorarHasta: 0 },
-    { nombre: 'FACTURAS', url: 'https://facturas-production-2ab1.up.railway.app', serviceId: 'a0bcb1ce-b45c-40e4-b2f1-367e03ca925b', envId: ENV_CRONOS_ID, fallos: 0, ignorarHasta: 0 }
+    { nombre: 'SERVICIOS-PRINCIPAL', url: 'https://servicios-production-9681.up.railway.app', fallos: 0, ignorarHasta: 0 },
+    { nombre: 'FACTURAS-PRINCIPAL', url: 'https://facturas-production-2ab1.up.railway.app', fallos: 0, ignorarHasta: 0 },
+    { nombre: 'SERVICIOS-TOCUYITO', url: 'servicios-tocuyito-production.up.railway.app', fallos: 0, ignorarHasta: 0 },
+    { nombre: 'FACTURAS-TOCUYITO', url: 'facturas-tocuyito-production.up.railway.app', fallos: 0, ignorarHasta: 0 }
 ];
 
 // --- NUEVA BÓVEDA EXCLUSIVA PARA LOS JEFES (PAGOS EXITOSOS) ---
@@ -1118,14 +1126,24 @@ app.all('*', async (req, res) => {
     const requestId = Math.random().toString(36).substring(2, 7).toUpperCase();
     
     // Al declararla con 'let', la hacemos estrictamente PRIVADA para esta petición
-    let idCliente = ""; 
-    if (req.method === 'POST') {
-        if (req.path === '/pagar' && req.body && req.body.id) idCliente = req.body.id;
-        else if (req.path === '/pagar-vidanet' && req.body && req.body.datos && req.body.datos.cedula) idCliente = req.body.datos.cedula;
-    } else if (req.method === 'GET') {
-        if (req.query && req.query.id) idCliente = req.query.id;
-        else if (req.query && req.query.cedula) idCliente = req.query.cedula;
-    }
+    let idCliente = ""; 
+    let sucursalRequerida = "PRINCIPAL"; // Por defecto, asumimos Principal si no mandan nada
+
+    if (req.method === 'POST') {
+        if (req.path === '/pagar' && req.body && req.body.id) {
+            idCliente = req.body.id;
+            if (req.body.sucursal) sucursalRequerida = req.body.sucursal.toUpperCase();
+        }
+        else if (req.path === '/pagar-vidanet' && req.body && req.body.datos && req.body.datos.cedula) {
+            idCliente = req.body.datos.cedula;
+            if (req.body.sucursal) sucursalRequerida = req.body.sucursal.toUpperCase();
+            else if (req.body.datos.sucursal) sucursalRequerida = req.body.datos.sucursal.toUpperCase();
+        }
+    } else if (req.method === 'GET') {
+        if (req.query && req.query.id) idCliente = req.query.id;
+        else if (req.query && req.query.cedula) idCliente = req.query.cedula;
+        if (req.query && req.query.sucursal) sucursalRequerida = req.query.sucursal.toUpperCase();
+    }
     
     const etiqueta = idCliente ? `[👤 ${idCliente}] ` : "";
 
@@ -1163,15 +1181,17 @@ app.all('*', async (req, res) => {
     while (intentos < 3 && !exito) {
         const ahora = Date.now();
         const obrerosDisponibles = OBREROS.filter(o => {
-            if (!o.activo || obrerosDescartados.includes(o.id)) return false;
-            if (ahora < o.cocinandoHasta) return false;
-            
-            // 🛑 EL CANDADO DE TITANIO: Bloqueo absoluto por carga. 
-            // Si el Obrero tiene 1 sola petición de CUALQUIER tipo, se vuelve invisible.
-            if (o.carga > 0) return false; 
-            
-            return true;
-        });
+            if (!o.activo || obrerosDescartados.includes(o.id)) return false;
+            if (ahora < o.cocinandoHasta) return false;
+            
+            // 🛑 EL CANDADO DE TITANIO: Bloqueo absoluto por carga. 
+            if (o.carga > 0) return false; 
+
+            // 🎯 LA BARRERA DE JURISDICCIÓN: Solo elegimos obreros que pertenezcan a la sucursal pedida
+            if (o.sucursal !== sucursalRequerida) return false;
+            
+            return true;
+        });
         
         // --- LÓGICA DE COLA CON RESPUESTA ANTICIPADA ---
         if (obrerosDisponibles.length === 0) {
