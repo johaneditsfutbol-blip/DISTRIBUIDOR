@@ -9,7 +9,37 @@ app.use(express.json({ limit: '50mb' })); // Aumentamos límite por las imágene
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
 // ============================================================================
-// 🚀 NÚCLEO DE DATOS: SUPABASE Y PERRO RASTREADOR
+// ESCUDO DE AUTENTICACIÓN (API KEY)
+// ============================================================================
+app.use((req, res, next) => {
+    // 1. Excluimos el panel de control y los webhooks internos para no romper la infraestructura
+    if (req.path === '/status' || req.path.startsWith('/api/tactico')) {
+        return next();
+    }
+
+    // 2. Excepción táctica: Si la solicitud viene de Vivian, le abrimos la puerta sin pedir llave
+    const origen = req.query.origen || (req.body && req.body.origen);
+    if (origen === 'vivian') {
+        return next();
+    }
+
+    // 3. Verificación de la llave para el resto de mortales (App)
+    const tokenHeader = req.headers['x-api-key'];
+    const tokenReal = process.env.API_SECRET_TOKEN;
+
+    if (!tokenHeader || tokenHeader !== tokenReal) {
+        return res.status(401).json({ 
+            success: false, 
+            error: "Acceso denegado. Faltan credenciales de seguridad o son inválidas." 
+        });
+    }
+
+    // Si tiene la llave correcta, lo dejamos pasar a la ruta que solicitó
+    next();
+});
+
+// ============================================================================
+// NÚCLEO DE DATOS: SUPABASE Y PERRO RASTREADOR
 // ============================================================================
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
 
