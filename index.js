@@ -180,21 +180,19 @@ const TIMEOUT_SALA_ESPERA = 45000; // 45 segundos
 const CACHE_SERVICIOS = new Map();
 const TIEMPO_CACHE = 5 * 60 * 1000; // 5 minutos en milisegundos
 
-const esperarTurno = (requestId, etiqueta, esBackground = false) => {
-    return new Promise((resolve, reject) => {
-        let timeoutCola = null;
-        
-        // Si no es un proceso en background (pago anticipado), aplicamos el límite de tiempo
-        if (!esBackground) {
-            timeoutCola = setTimeout(() => {
-                const index = COLA_DE_ESPERA.findIndex(c => c.resolve === resolve);
-                if (index !== -1) COLA_DE_ESPERA.splice(index, 1);
-                reject(new Error("TIMEOUT_COLA"));
-            }, TIMEOUT_SALA_ESPERA);
-        }
-
-        COLA_DE_ESPERA.push({ resolve, timeoutCola, requestId, etiqueta });
-    });
+const esperarTurno = (requestId, etiqueta, esBackground = false, sucursal = 'PRINCIPAL') => {
+    return new Promise((resolve, reject) => {
+        // ... (mismo código interno del if y setTimeout) ...
+        if (!esBackground) {
+            timeoutCola = setTimeout(() => {
+                const index = COLA_DE_ESPERA.findIndex(c => c.resolve === resolve);
+                if (index !== -1) COLA_DE_ESPERA.splice(index, 1);
+                reject(new Error("TIMEOUT_COLA"));
+            }, TIMEOUT_SALA_ESPERA);
+        }
+        // Le pegamos la sucursal al ticket para que el Motor sepa a dónde va
+        COLA_DE_ESPERA.push({ resolve, timeoutCola, requestId, etiqueta, sucursal });
+    });
 };
 
 // --- SISTEMA DE PERRO GUARDIÁN (WATCHDOG & WEBHOOKS) ---
@@ -1239,7 +1237,7 @@ app.all('*', async (req, res) => {
 
             try {
                 // Pasamos 'respuestaEnviada' como tercer parámetro a esperarTurno
-                await esperarTurno(requestId, etiqueta, respuestaEnviada); 
+                await esperarTurno(requestId, etiqueta, respuestaEnviada, sucursalRequerida); 
                 continue; 
             } catch (err) {
                 if (err.message === "TIMEOUT_COLA") {
@@ -1258,19 +1256,12 @@ app.all('*', async (req, res) => {
         const empatados = obrerosDisponibles.filter(o => o.carga === menorCarga);
         obreroElegido = empatados[Math.floor(Math.random() * empatados.length)];
 
-        // --- CORTACIRCUITOS DINÁMICO (TIMEOUT RED) ---
-        // Aumentamos el límite de red a 130s para darle oportunidad al Watchdog (120s) de actuar primero
-        const limiteTiempo = req.path === '/buscar-servicios' ? 15000 : 130000;
-        // ------------------------------------------
+        // --- CORTACIRCUITOS DINÁMICO ---
+        const limiteTiempo = 130000; // Todo lo que llega aquí es pesado (Pagos)
 
-        try {
-            obreroElegido.carga++;
-            
-            if (req.path === '/buscar-servicios') {
-                obreroElegido.buscandoServicios = true;
-            }
-
-            console.log(`  [>> REQ: ${requestId}] ${etiqueta}Intentando Obrero ${obreroElegido.id} (Intento ${intentos + 1}/3)`);
+        try {
+            obreroElegido.carga++;
+            console.log(`  [>> REQ: ${requestId}] ${etiqueta}Intentando Obrero ${obreroElegido.id} (Intento ${intentos + 1}/3)`);
 
             // --- 🎯 INYECCIÓN VITAL: RESPUESTA ANTICIPADA SIEMPRE ---
             // Si es un pago, no importa si hay cola o no, enviamos el 200 OK INMEDIATAMENTE
@@ -1468,21 +1459,25 @@ app.all('*', async (req, res) => {
             errorFinal = msjResumido;
 
         } finally {
-            if (obreroElegido) {
-                obreroElegido.carga--;
-                if (req.path === '/buscar-servicios') {
-                    obreroElegido.buscandoServicios = false;
-                    log('INFO', 'Candado Liberado: Termina búsqueda de servicios.', obreroElegido.id);
-                }
-            }
+            if (obreroElegido) {
+                obreroElegido.carga--;
+                if (obreroElegido.activo) obreroElegido.cocinandoHasta = 0; // 💥 Matamos el candado de tiempo
+            }
 
-            if (COLA_DE_ESPERA.length > 0) {
-                const siguienteEnFila = COLA_DE_ESPERA.shift();
-                if (siguienteEnFila.timeoutCola) clearTimeout(siguienteEnFila.timeoutCola); 
-                agregarLog(siguienteEnFila.requestId, 'INFO', `${siguienteEnFila.etiqueta}Saliendo de la sala de espera. Evaluando obreros...`);
-                siguienteEnFila.resolve(); 
-            }
-        }
+            if (COLA_DE_ESPERA.length > 0) {
+                // 🎯 Despertamos al primero que vaya a la MISMA SUCURSAL
+                let indexDespertar = 0;
+                if (obreroElegido) {
+                    const idx = COLA_DE_ESPERA.findIndex(c => c.sucursal === obreroElegido.sucursal);
+                    if (idx !== -1) indexDespertar = idx;
+                }
+                
+                const siguienteEnFila = COLA_DE_ESPERA.splice(indexDespertar, 1)[0];
+                if (siguienteEnFila.timeoutCola) clearTimeout(siguienteEnFila.timeoutCola); 
+                agregarLog(siguienteEnFila.requestId, 'INFO', `${siguienteEnFila.etiqueta}Saliendo de cola. Re-evaluando obreros de ${siguienteEnFila.sucursal}...`);
+                siguienteEnFila.resolve(); 
+            }
+        }
     }
 
     if (!exito) {
@@ -1493,6 +1488,36 @@ app.all('*', async (req, res) => {
         }
     }
 });
+
+// ============================================================================
+// 4.5. MOTOR DE COLA ACTIVA (VIGILANTE DE ALTA FRECUENCIA)
+// ============================================================================
+setInterval(() => {
+    if (COLA_DE_ESPERA.length === 0) return; // Si no hay cola, no hacemos nada
+
+    const ahora = Date.now();
+    // Buscamos obreros que estén 100% libres y hayan terminado CUALQUIER cuenta regresiva
+    const obrerosLibres = OBREROS.filter(o => o.activo && o.carga === 0 && ahora >= o.cocinandoHasta);
+
+    for (let obrero of obrerosLibres) {
+        if (COLA_DE_ESPERA.length === 0) break;
+        
+        // ¿Hay alguien en la cola esperando por la sucursal de este obrero?
+        const idx = COLA_DE_ESPERA.findIndex(c => c.sucursal === obrero.sucursal);
+        if (idx !== -1) {
+            const estancado = COLA_DE_ESPERA.splice(idx, 1)[0];
+            if (estancado.timeoutCola) clearTimeout(estancado.timeoutCola);
+            
+            agregarLog(estancado.requestId, 'INFO', `MOTOR DE COLA: Obrero ${obrero.id} detectado libre en las sombras. Despertando solicitud...`, obrero.id);
+            
+            // Lo marcamos ocupado artificialmente por medio segundo para que este loop no asigne a 2 personas al mismo obrero a la vez
+            obrero.carga++; 
+            setTimeout(() => { obrero.carga--; }, 500); 
+            
+            estancado.resolve(); // ¡DESPIERTA!
+        }
+    }
+}, 2000); // Escanea la cola cada 2 segundos exactos
 
 // ============================================================================
 // 5. EL NÚCLEO AUTÓNOMO (SELF-HEALING HEARTBEAT) - "EL JAQUE MATE"
