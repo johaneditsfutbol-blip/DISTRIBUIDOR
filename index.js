@@ -625,7 +625,7 @@ app.get('/status', (req, res) => {
             let historialGlobal = [];
             let pagosGlobal = [];
             let vistaActual = 'telemetry';
-            let canalActual = 'ALL'; // Canal de radio seleccionado
+            let canalActual = 'ALL'; 
             
             let pagTel = 1, pagLed = 1;
             const LIMIT_TEL = 50, LIMIT_LED = 20;
@@ -640,7 +640,14 @@ app.get('/status', (req, res) => {
             const txtCola = document.getElementById('txt-cola');
             const iconCola = document.getElementById('icon-cola');
 
-            // Listeners Pestañas Principales
+            // --- 🎯 FUNCIÓN FRANCOTIRADOR DE CONTEXTO ---
+            window.filtrarContexto = function(reqId) {
+                document.getElementById('input-busqueda-tel').value = reqId;
+                document.getElementById('filtro-tipo-tel').value = 'ALL';
+                setCanal('ALL'); 
+            };
+
+            // Listeners Pestañas
             function switchTab(tab) {
                 vistaActual = tab;
                 document.getElementById('view-telemetry').classList.toggle('hidden', tab !== 'telemetry');
@@ -659,7 +666,6 @@ app.get('/status', (req, res) => {
                 renderizarVistas();
             }
 
-            // Cambiar Canal de Radio (Sidebar)
             function setCanal(idCanal) {
                 canalActual = idCanal;
                 pagTel = 1;
@@ -668,13 +674,12 @@ app.get('/status', (req, res) => {
                 renderizarTelemetria();
             }
 
-            // Listeners Telemetría
+            // Listeners UI
             document.getElementById('input-busqueda-tel').addEventListener('input', () => { pagTel = 1; renderizarTelemetria(); });
             document.getElementById('filtro-tipo-tel').addEventListener('change', () => { pagTel = 1; renderizarTelemetria(); });
             document.getElementById('btn-prev-tel').addEventListener('click', () => { if(pagTel > 1) { pagTel--; renderizarTelemetria(); } });
             document.getElementById('btn-next-tel').addEventListener('click', () => { pagTel++; renderizarTelemetria(); });
 
-            // Listeners Ledger
             document.getElementById('input-busqueda-led').addEventListener('input', () => { pagLed = 1; renderizarLedger(); });
             document.getElementById('filtro-tipo-led').addEventListener('change', () => { pagLed = 1; renderizarLedger(); });
             document.getElementById('btn-prev-led').addEventListener('click', () => { if(pagLed > 1) { pagLed--; renderizarLedger(); } });
@@ -705,7 +710,6 @@ app.get('/status', (req, res) => {
                         renderizarLedger();
                     }
                     
-                    // UI Cola - Tema claro
                     txtCola.innerText = 'COLA: ' + data.encolados.toString().padStart(2, '0');
                     if (data.encolados > 0) {
                         badgeCola.className = 'flex items-center gap-2 border border-amber-200 bg-amber-50 px-3 py-1 rounded-md transition-all duration-300 shadow-sm';
@@ -730,6 +734,7 @@ app.get('/status', (req, res) => {
                 else renderizarLedger();
             }
 
+            // --- 💥 BOTONES RESTAURADOS AQUÍ 💥 ---
             function renderizarObreros(obreros) {
                 const tiempoActual = Date.now();
                 let htmlTemp = '';
@@ -753,7 +758,7 @@ app.get('/status', (req, res) => {
                         : \`<span class="bg-slate-100 text-slate-600 border border-slate-200 px-1.5 py-0.5 rounded text-[8px] font-bold">PRIN</span>\`;
 
                     htmlTemp += \`
-                    <div class="p-3 border \${bordeEstado} rounded-lg shadow-sm transition-colors flex flex-col justify-between h-[110px]">
+                    <div class="p-3 border \${bordeEstado} rounded-lg shadow-sm transition-colors flex flex-col justify-between h-[130px]">
                         <div class="flex justify-between items-start mb-1">
                             <div>
                                 <h2 class="text-sm font-bold text-slate-800 flex items-center gap-1.5">WK_0\${o.id} \${tagSucursal}</h2>
@@ -764,29 +769,36 @@ app.get('/status', (req, res) => {
                             </div>
                         </div>
                         
-                        <div class="flex justify-between items-end mt-auto">
+                        <div class="flex justify-between items-end mb-2">
                             <div class="flex gap-2 text-[9px] h-3">\${opsBadges}</div>
                             <div class="w-12 bg-slate-200 rounded-full h-1.5 overflow-hidden">
                                 <div class="\${colorBarra} h-full transition-all duration-500" style="width: \${porcentajeCarga}%"></div>
                             </div>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-1.5 mt-auto text-[10px] font-bold">
+                            <button onclick="ejecutarOrden(\${o.id})" class="bg-white text-slate-600 border border-slate-200 hover:bg-red-50 hover:text-red-600 hover:border-red-200 rounded py-1 transition-colors group shadow-sm flex items-center justify-center gap-1">
+                                <i class="fa-solid fa-rotate-right group-hover:animate-spin"></i> REINICIO
+                            </button>
+                            <button onclick="revivir(\${o.id})" class="bg-white text-slate-600 border border-slate-200 hover:bg-emerald-50 hover:text-emerald-700 hover:border-emerald-200 rounded py-1 transition-colors shadow-sm flex items-center justify-center gap-1">
+                                <i class="fa-solid fa-bolt"></i> FZ_ON
+                            </button>
                         </div>
                     </div>\`;
                 });
                 grid.innerHTML = htmlTemp;
             }
 
-            // 📡 MOTOR DEL RADAR LATERAL (NUEVO)
             function renderizarSidebarCanales() {
-                // 1. Extraer identificadores únicos y contar logs por canal
                 const conteo = { 'ALL': historialGlobal.length, 'SYS': 0 };
                 
                 historialGlobal.forEach(log => {
+                    // Si el worker mandó WK_?, lo agrupamos igual para que se vea
                     const id = log.obreroId || 'UNK';
                     if (!conteo[id]) conteo[id] = 0;
                     conteo[id]++;
                 });
 
-                // Ordenar los canales (SYS primero, luego WK, luego Cronos)
                 const canales = Object.keys(conteo).sort((a, b) => {
                     if (a === 'ALL') return -1;
                     if (b === 'ALL') return 1;
@@ -797,11 +809,10 @@ app.get('/status', (req, res) => {
 
                 let htmlTemp = '';
                 canales.forEach(id => {
-                    if(conteo[id] === 0 && id !== 'ALL' && id !== 'SYS') return; // Ocultar canales vacíos
+                    if(conteo[id] === 0 && id !== 'ALL' && id !== 'SYS') return;
 
                     const activo = canalActual === id ? 'channel-active' : 'channel-inactive';
                     
-                    // Iconos por tipo de fuente
                     let icon = '<i class="fa-solid fa-satellite-dish w-4"></i>';
                     if (id === 'SYS') icon = '<i class="fa-solid fa-microchip w-4"></i>';
                     else if (id.startsWith('WK')) icon = '<i class="fa-solid fa-robot w-4"></i>';
@@ -825,7 +836,6 @@ app.get('/status', (req, res) => {
                 const busqueda = document.getElementById('input-busqueda-tel').value.toLowerCase().trim();
                 const tipoFiltrado = document.getElementById('filtro-tipo-tel').value;
 
-                // Doble filtro: Por Búsqueda/Tipo Y por Canal seleccionado
                 let logsFiltrados = historialGlobal.filter(log => {
                     const coincideCanal = canalActual === 'ALL' || log.obreroId === canalActual;
                     const coincideTipo = tipoFiltrado === 'ALL' || log.tipo === tipoFiltrado;
@@ -863,19 +873,21 @@ app.get('/status', (req, res) => {
 
                     const duracionStr = log.duracion ? \`<span class="text-slate-400 ml-2 text-[9px]">[\${log.duracion}ms]</span>\` : '';
                     
-                    // Ya no forzamos "WK_" ni "SYS" en la UI de cada fila si el canal lateral ya lo dice, pero lo dejamos sutil para ALL_STREAMS
                     let tagOrigen = '';
                     if (canalActual === 'ALL') {
                         const bgTag = log.obreroId === 'SYS' ? 'bg-slate-200 text-slate-600' : 'bg-blue-100 text-blue-700 border-blue-200 border';
                         tagOrigen = \`<span class="ml-2 px-1.5 py-0.5 rounded text-[9px] font-bold \${bgTag}">\${log.obreroId}</span>\`;
                     }
 
-                    // Corrección vital: JSON bien formateado en los logs con whitespace-pre-wrap
                     htmlTemp += \`
                     <div class="flex items-start gap-2 p-1.5 hover:bg-white transition-colors border-l-2 border-transparent hover:border-blue-400 rounded \${bgFondo}">
                         <div class="text-slate-400 w-20 shrink-0 mt-0.5 text-[10px] font-mono">\${formatearHora(log.tiempo)}</div>
                         <div class="w-4 shrink-0 text-center mt-0.5 text-[10px]"><i class="\${iconClass}"></i></div>
-                        <div class="text-slate-500 w-12 shrink-0 text-center mt-0.5 font-mono text-[9px] font-bold bg-white border border-slate-200 rounded py-0.5 shadow-sm">\${log.reqId}</div>
+                        
+                        <div class="text-slate-500 w-[70px] shrink-0 flex items-center justify-center gap-1 mt-0.5 font-mono text-[9px] font-bold bg-white border border-slate-200 rounded py-0.5 shadow-sm hover:bg-blue-50 hover:text-blue-600 hover:border-blue-300 cursor-pointer transition-all" onclick="filtrarContexto('\${log.reqId}')" title="Rastrear todo el flujo de este REQ_ID">
+                            \${log.reqId} <i class="fa-solid fa-crosshairs text-[8px] opacity-70"></i>
+                        </div>
+                        
                         <div class="\${colorBase} break-all flex-grow leading-snug text-[11px] whitespace-pre-wrap font-mono">\${log.mensaje} \${tagOrigen}\${duracionStr}</div>
                     </div>\`;
                 });
@@ -886,7 +898,6 @@ app.get('/status', (req, res) => {
                 const busqueda = document.getElementById('input-busqueda-led').value.toLowerCase().trim();
                 const tipoFiltrado = document.getElementById('filtro-tipo-led').value;
 
-                // Actualizar Stats
                 let cVidanet = 0, cIcaro = 0, cRechazadosVid = 0, sumTime = 0;
                 
                 pagosGlobal.forEach(p => {
@@ -951,7 +962,7 @@ app.get('/status', (req, res) => {
                             </div>
                             <div class="min-w-0">
                                 <div class="text-slate-800 font-bold text-xs flex items-center truncate">\${p.cliente} \${badgeSucursal}</div>
-                                <div class="text-[10px] font-mono text-slate-500 mt-0.5 truncate">\${formatearHora(p.tiempo, true)} <span class="text-slate-300 mx-1">|</span> REQ: <span class="font-bold text-slate-600">\${p.reqId}</span></div>
+                                <div class="text-[10px] font-mono text-slate-500 mt-0.5 truncate">\${formatearHora(p.tiempo, true)} <span class="text-slate-300 mx-1">|</span> REQ: <span class="font-bold text-slate-600 cursor-pointer hover:text-blue-500" onclick="filtrarContexto('\${p.reqId}')" title="Rastrear este ID en Telemetría">\${p.reqId}</span></div>
                             </div>
                         </div>
                         <div class="text-right shrink-0 ml-2">
@@ -961,6 +972,14 @@ app.get('/status', (req, res) => {
                     </div>\`;
                 });
                 ledger.innerHTML = htmlTemp;
+            }
+
+            window.ejecutarOrden = async function(id) {
+                if(!confirm(\`ATENCIÓN: ¿Forzar reinicio del WORKER_\${id}? (Destruye contenedor)\`)) return;
+                try { await fetch(\`/api/tactico/estado\`); await fetch(\`/api/tactico/orden66/\${id}\`, { method: 'POST', headers: {'x-comandante-secret': 'IcaroSoft_Destruccion_Inminente_2026'} }); } catch(e) {}
+            }
+            window.revivir = async function(id) {
+                try { await fetch(\`/api/tactico/revivir/\${id}\`, { method: 'POST' }); } catch(e) {}
             }
 
             escanearEscuadron();
