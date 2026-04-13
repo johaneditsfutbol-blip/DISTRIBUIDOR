@@ -240,7 +240,14 @@ const formatoLogConsola = (titulo, objeto) => {
 // ============================================================================
 
 app.get('/api/tactico/estado', (req, res) => {
-    res.json({ obreros: OBREROS, historial: HISTORIAL, encolados: COLA_DE_ESPERA.length, pagos: PAGOS_EXITOSOS });
+    res.json({ obreros: OBREROS, historial: HISTORIAL, encolados: COLA_DE_ESPERA.length, pagos: PAGOS_EXITOSOS });
+});
+
+// --- NUEVO: RECEPTOR DE TELEMETRÍA EXTERNA ---
+app.post('/api/tactico/log-externo', (req, res) => {
+    const { reqId, tipo, mensaje, idOrigen, duracion } = req.body;
+    agregarLog(reqId || 'EXT', tipo, mensaje, idOrigen || 'UNK', duracion);
+    res.status(200).send("Reporte recibido");
 });
 
 // --- NUEVO: RECEPTOR DE RADIO DE LOS OBREROS ---
