@@ -797,7 +797,7 @@ app.get('/status', (req, res) => {
                         <div class="text-slate-400 w-24 shrink-0 mt-0.5 text-[11px] font-mono">\${formatearHora(log.tiempo)}</div>
                         <div class="w-5 shrink-0 text-center mt-0.5"><i class="\${iconClass}"></i></div>
                         <div class="text-slate-600 w-16 shrink-0 text-center mt-0.5 font-mono text-[10px] font-bold bg-white border border-slate-200 rounded py-0.5">\${log.reqId}</div>
-                        <div class="\${colorBase} break-all flex-grow leading-snug text-[13px]">\${log.mensaje} \${obreroTag}\${duracionStr}</div>
+                        <div class="\${colorBase} break-all flex-grow leading-snug text-[13px] whitespace-pre-wrap font-mono">\${log.mensaje} \${obreroTag}\${duracionStr}</div>
                     </div>\`;
                 });
                 terminal.innerHTML = htmlTemp;
@@ -1203,12 +1203,13 @@ app.all('*', async (req, res) => {
     // ====================================================================
     
     if (req.method !== 'GET' && Object.keys(req.body).length > 0) {
-        const rBody = JSON.parse(JSON.stringify(req.body)); 
-        if (rBody.datos && rBody.datos.rutaImagen) {
-             rBody.datos.rutaImagen = "[Imagen Oculta solo en el Log]";
-        }
-        console.log(formatoLogConsola(`${etiqueta}Body [${requestId}]`, rBody));
-    }
+        const rBody = JSON.parse(JSON.stringify(req.body)); 
+        if (rBody.datos && rBody.datos.rutaImagen) {
+             rBody.datos.rutaImagen = "[Imagen Oculta solo en el Log]";
+        }
+        // 🔥 Lo inyectamos directo al Dashboard para que puedas ver el JSON 🔥
+        log('INFO', `Payload Entrada:\n${formatoLogConsola('Datos', rBody)}`);
+    }
 
     // --- BANDERA DE ESTADO (Para la respuesta anticipada) ---
     let respuestaEnviada = false;
