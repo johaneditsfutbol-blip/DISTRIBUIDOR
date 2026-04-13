@@ -425,8 +425,8 @@ app.get('/status', (req, res) => {
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>CX-NEXUS | Command Center</title>
         <script src="https://cdn.tailwindcss.com"></script>
-        <link rel="stylesheet" href="https://cdnjs.cloudflare.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Fira+Code:wght@400;500;600&display=swap" rel="stylesheet">
         
         <script>
             tailwind.config = {
@@ -447,28 +447,34 @@ app.get('/status', (req, res) => {
             ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
             ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
             
-            /* TABS CSS - Minimalista corporativo */
-            .tab-btn { transition: all 0.2s ease; font-weight: 500; }
+            /* Tabs */
+            .tab-btn { transition: all 0.2s ease; font-weight: 600; }
             .tab-active { color: #2563eb; border-bottom: 2px solid #2563eb; }
             .tab-inactive { color: #64748b; border-bottom: 2px solid transparent; }
             .tab-inactive:hover { color: #334155; border-color: #cbd5e1; }
             
-            .micro-data { font-size: 0.65rem; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; color: #64748b; }
+            /* Sidebar Channels */
+            .channel-btn { transition: all 0.2s; }
+            .channel-active { background-color: #eff6ff; border-left: 3px solid #3b82f6; color: #1e3a8a; font-weight: 600; }
+            .channel-inactive { background-color: transparent; border-left: 3px solid transparent; color: #64748b; }
+            .channel-inactive:hover { background-color: #f1f5f9; color: #334155; }
+
+            .micro-data { font-size: 0.65rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; color: #64748b; }
             .card-shadow { box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06); }
         </style>
     </head>
-    <body class="p-4 md:p-8 min-h-screen relative flex flex-col font-sans">
+    <body class="p-4 md:p-6 min-h-screen relative flex flex-col font-sans">
         
-        <div class="max-w-[1400px] mx-auto w-full relative z-10 flex-grow flex flex-col">
+        <div class="max-w-[1500px] mx-auto w-full relative z-10 flex-grow flex flex-col">
             
-            <header class="bg-white card-shadow border border-slate-200 rounded-xl p-5 md:p-6 mb-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+            <header class="bg-white card-shadow border border-slate-200 rounded-xl p-4 md:p-5 mb-5 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div class="flex items-center gap-4">
                     <div class="w-12 h-12 flex items-center justify-center rounded-lg bg-blue-50 border border-blue-100 text-blue-600">
                         <i class="fa-solid fa-network-wired text-xl"></i>
                     </div>
                     <div>
                         <h1 class="text-2xl font-bold text-slate-800 tracking-tight">CX-NEXUS <span class="font-normal text-slate-400">| Command Center</span></h1>
-                        <div class="flex gap-3 text-xs font-medium text-slate-500 mt-1">
+                        <div class="flex gap-3 text-xs font-semibold text-slate-500 mt-1">
                             <span>SYS_ID: OP-77X</span> 
                             <span class="text-slate-300">•</span> 
                             <span>NODE: RAILWAY_PRD</span>
@@ -477,7 +483,7 @@ app.get('/status', (req, res) => {
                 </div>
 
                 <div class="flex flex-col items-start md:items-end gap-2 w-full md:w-auto bg-slate-50 p-3 rounded-lg border border-slate-100">
-                    <div class="flex items-center gap-3 text-sm font-semibold">
+                    <div class="flex items-center gap-3 text-sm font-bold tracking-wide">
                         <div id="badge-cola" class="flex items-center gap-2 border border-slate-200 bg-white px-3 py-1 rounded-md transition-all duration-300 shadow-sm">
                             <i class="fa-solid fa-server text-slate-400" id="icon-cola"></i>
                             <span id="txt-cola" class="text-slate-600">COLA: 0</span>
@@ -490,98 +496,109 @@ app.get('/status', (req, res) => {
                             <span class="text-emerald-700 text-xs">UPLINK ESTABLE</span>
                         </div>
                     </div>
-                    <div class="flex gap-3 text-[10px] font-mono text-slate-500 mt-1 w-full justify-end">
-                        <span>LATENCIA: <span class="text-emerald-600 font-semibold">12ms</span></span>
+                    <div class="flex gap-3 text-[10px] font-mono text-slate-500 mt-1 w-full justify-end font-semibold">
+                        <span>LATENCIA: <span class="text-emerald-600">12ms</span></span>
                         <span id="txt-actualizacion">SYNC: 00:00:00</span>
                     </div>
                 </div>
             </header>
             
             <div class="mb-2">
-                <h2 class="text-sm font-bold text-slate-700 uppercase tracking-wider mb-3 flex items-center gap-2">
-                    <i class="fa-solid fa-robot text-blue-500"></i> Escuadrón Activo
+                <h2 class="text-xs font-bold text-slate-500 uppercase tracking-widest mb-3 flex items-center gap-2">
+                    <i class="fa-solid fa-microchip text-blue-500"></i> Nodos de Procesamiento
                 </h2>
-                <div id="grid-obreros" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mb-8"></div>
+                <div id="grid-obreros" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3 mb-6"></div>
             </div>
 
             <div class="flex gap-8 mb-4 px-2 border-b border-slate-200">
-                <button id="btn-tab-telemetry" class="tab-btn tab-active pb-3 flex items-center gap-2 text-sm" onclick="switchTab('telemetry')">
-                    <i class="fa-solid fa-satellite-dish"></i> Registro de Telemetría
+                <button id="btn-tab-telemetry" class="tab-btn tab-active pb-3 flex items-center gap-2 text-sm uppercase tracking-wide" onclick="switchTab('telemetry')">
+                    <i class="fa-solid fa-satellite-dish"></i> Telemetría Unificada
                 </button>
-                <button id="btn-tab-ledger" class="tab-btn tab-inactive pb-3 flex items-center gap-2 text-sm" onclick="switchTab('ledger')">
+                <button id="btn-tab-ledger" class="tab-btn tab-inactive pb-3 flex items-center gap-2 text-sm uppercase tracking-wide" onclick="switchTab('ledger')">
                     <i class="fa-solid fa-vault"></i> Libro de Pagos (Ledger)
                 </button>
             </div>
 
-            <div class="bg-white card-shadow border border-slate-200 rounded-xl p-5 flex-grow flex flex-col relative overflow-hidden h-[500px]">
+            <div class="bg-white card-shadow border border-slate-200 rounded-xl p-4 md:p-5 flex-grow flex flex-col relative overflow-hidden h-[550px]">
                 
-                <div id="view-telemetry" class="w-full h-full flex flex-col">
-                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-4">
-                        <div class="micro-data text-slate-400">
-                            BUFFER: 1000 EVENTOS
-                        </div>
-                        <div class="flex gap-3 w-full sm:w-auto">
-                            <div class="relative w-full sm:w-72">
-                                <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-                                    <i class="fa-solid fa-magnifying-glass text-slate-400"></i>
-                                </div>
-                                <input type="text" id="input-busqueda-tel" placeholder="Buscar ID, mensaje..." class="bg-slate-50 border border-slate-200 text-slate-700 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full pl-9 p-2 outline-none transition-colors">
-                            </div>
-                            <select id="filtro-tipo-tel" class="bg-slate-50 border border-slate-200 text-slate-700 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full sm:w-40 p-2 outline-none font-medium cursor-pointer">
-                                <option value="ALL">Todos los eventos</option>
-                                <option value="ERROR">Errores</option>
-                                <option value="EXITO">Éxito</option>
-                                <option value="COLA">En Cola</option>
-                                <option value="INFO">Información</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div id="terminal-logs" class="overflow-y-auto flex-grow space-y-2 pr-2 mb-3 bg-slate-50/50 rounded-lg p-2 border border-slate-100"></div>
+                <div id="view-telemetry" class="w-full h-full flex flex-col md:flex-row gap-4 overflow-hidden">
                     
-                    <div class="flex justify-between items-center border-t border-slate-200 pt-3">
-                        <span id="txt-resultados-tel" class="text-slate-500 text-xs font-semibold">COINCIDENCIAS: 0</span>
-                        <div class="flex items-center gap-1">
-                            <button id="btn-prev-tel" class="w-8 h-8 rounded-md bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-blue-600 disabled:opacity-30 transition-all"><i class="fa-solid fa-chevron-left"></i></button>
-                            <span id="txt-paginacion-tel" class="px-4 text-xs font-bold text-slate-700">1 / 1</span>
-                            <button id="btn-next-tel" class="w-8 h-8 rounded-md bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-blue-600 disabled:opacity-30 transition-all"><i class="fa-solid fa-chevron-right"></i></button>
+                    <div class="w-full md:w-56 shrink-0 flex flex-col bg-slate-50 rounded-lg border border-slate-100 overflow-hidden">
+                        <div class="p-3 border-b border-slate-200 bg-white">
+                            <span class="micro-data">Frecuencias Activas</span>
+                        </div>
+                        <div id="sidebar-canales" class="flex flex-col overflow-y-auto p-2 gap-1 h-full">
+                            </div>
+                    </div>
+
+                    <div class="flex-grow flex flex-col min-w-0 overflow-hidden">
+                        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-3 gap-3">
+                            <div class="flex items-center gap-2">
+                                <span class="micro-data bg-blue-100 text-blue-700 px-2 py-1 rounded" id="badge-canal-actual">ALL_STREAMS</span>
+                            </div>
+                            <div class="flex gap-2 w-full sm:w-auto">
+                                <div class="relative w-full sm:w-64">
+                                    <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                                        <i class="fa-solid fa-magnifying-glass text-slate-400 text-xs"></i>
+                                    </div>
+                                    <input type="text" id="input-busqueda-tel" placeholder="Buscar ID, mensaje..." class="bg-white border border-slate-200 text-slate-700 text-xs font-mono rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 block w-full pl-8 p-1.5 outline-none transition-colors">
+                                </div>
+                                <select id="filtro-tipo-tel" class="bg-white border border-slate-200 text-slate-700 text-xs font-semibold rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 block w-full sm:w-32 p-1.5 outline-none cursor-pointer">
+                                    <option value="ALL">Todo</option>
+                                    <option value="ERROR">Errores</option>
+                                    <option value="EXITO">Éxitos</option>
+                                    <option value="INFO">Info</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <div id="terminal-logs" class="overflow-y-auto flex-grow space-y-1.5 pr-2 mb-3 bg-slate-50/50 rounded border border-slate-100 p-2"></div>
+                        
+                        <div class="flex justify-between items-center border-t border-slate-200 pt-2 mt-auto">
+                            <span id="txt-resultados-tel" class="text-slate-500 text-xs font-semibold font-mono">MATCHES: 0</span>
+                            <div class="flex items-center gap-1">
+                                <button id="btn-prev-tel" class="w-7 h-7 rounded bg-white border border-slate-200 text-slate-600 hover:bg-blue-50 hover:text-blue-600 hover:border-blue-200 disabled:opacity-30 transition-all"><i class="fa-solid fa-chevron-left text-xs"></i></button>
+                                <span id="txt-paginacion-tel" class="px-3 text-xs font-bold text-slate-700 font-mono">1 / 1</span>
+                                <button id="btn-next-tel" class="w-7 h-7 rounded bg-white border border-slate-200 text-slate-600 hover:bg-blue-50 hover:text-blue-600 hover:border-blue-200 disabled:opacity-30 transition-all"><i class="fa-solid fa-chevron-right text-xs"></i></button>
+                            </div>
                         </div>
                     </div>
                 </div>
 
                 <div id="view-ledger" class="w-full h-full flex flex-col hidden">
-                    <div class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-5 pb-5 border-b border-slate-100">
-                        <div class="bg-slate-50 border border-slate-200 rounded-lg p-3">
+                    <div class="grid grid-cols-2 md:grid-cols-5 gap-3 mb-4 pb-4 border-b border-slate-100">
+                        <div class="bg-slate-50 border border-slate-200 rounded p-3">
                             <div class="micro-data mb-1 text-slate-500">TOTAL PAGOS</div>
-                            <div class="text-2xl font-bold text-slate-800" id="stat-total">00</div>
+                            <div class="text-xl font-bold text-slate-800" id="stat-total">00</div>
                         </div>
-                        <div class="bg-blue-50 border border-blue-100 rounded-lg p-3">
+                        <div class="bg-blue-50 border border-blue-100 rounded p-3">
                             <div class="micro-data mb-1 text-blue-600">PAGOS VIDANET</div>
-                            <div class="text-2xl font-bold text-blue-700" id="stat-vidanet">00</div>
+                            <div class="text-xl font-bold text-blue-700" id="stat-vidanet">00</div>
                         </div>
-                        <div class="bg-indigo-50 border border-indigo-100 rounded-lg p-3">
+                        <div class="bg-indigo-50 border border-indigo-100 rounded p-3">
                             <div class="micro-data mb-1 text-indigo-600">PAGOS ICAROSOFT</div>
-                            <div class="text-2xl font-bold text-indigo-700" id="stat-icaro">00</div>
+                            <div class="text-xl font-bold text-indigo-700" id="stat-icaro">00</div>
                         </div>
-                        <div class="bg-red-50 border border-red-100 rounded-lg p-3">
+                        <div class="bg-red-50 border border-red-100 rounded p-3">
                             <div class="micro-data mb-1 text-red-600">RECHAZOS (APP)</div>
-                            <div class="text-2xl font-bold text-red-700" id="stat-rechazos-vidanet">00</div>
+                            <div class="text-xl font-bold text-red-700" id="stat-rechazos-vidanet">00</div>
                         </div>
-                        <div class="bg-slate-50 border border-slate-200 rounded-lg p-3">
+                        <div class="bg-slate-50 border border-slate-200 rounded p-3">
                             <div class="micro-data mb-1 text-slate-500">TIEMPO MEDIO</div>
-                            <div class="text-2xl font-bold text-emerald-600" id="stat-avg">0.0s</div>
+                            <div class="text-xl font-bold text-emerald-600" id="stat-avg">0.0s</div>
                         </div>
                     </div>
 
-                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-4">
-                        <span class="font-bold text-slate-700 text-sm flex items-center gap-2"><i class="fa-solid fa-list-check text-slate-400"></i> Historial Reciente</span>
-                        <div class="flex gap-3 w-full sm:w-auto">
-                            <div class="relative w-full sm:w-72">
+                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-3 gap-3">
+                        <span class="font-bold text-slate-700 text-xs tracking-widest uppercase flex items-center gap-2"><i class="fa-solid fa-list-check text-slate-400"></i> Historial Reciente</span>
+                        <div class="flex gap-2 w-full sm:w-auto">
+                            <div class="relative w-full sm:w-64">
                                 <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-                                    <i class="fa-solid fa-magnifying-glass text-slate-400"></i>
+                                    <i class="fa-solid fa-magnifying-glass text-slate-400 text-xs"></i>
                                 </div>
-                                <input type="text" id="input-busqueda-led" placeholder="Buscar cédula, ID..." class="bg-slate-50 border border-slate-200 text-slate-700 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full pl-9 p-2 outline-none">
+                                <input type="text" id="input-busqueda-led" placeholder="Buscar cédula, ID..." class="bg-white border border-slate-200 text-slate-700 text-xs font-mono rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 block w-full pl-8 p-1.5 outline-none">
                             </div>
-                            <select id="filtro-tipo-led" class="bg-slate-50 border border-slate-200 text-slate-700 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full sm:w-40 p-2 outline-none font-medium cursor-pointer">
+                            <select id="filtro-tipo-led" class="bg-white border border-slate-200 text-slate-700 text-xs font-semibold rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 block w-full sm:w-36 p-1.5 outline-none cursor-pointer">
                                 <option value="ALL">Ambos Sistemas</option>
                                 <option value="VIDANET">Solo Vidanet</option>
                                 <option value="ICAROSOFT">Solo Icarosoft</option>
@@ -589,14 +606,14 @@ app.get('/status', (req, res) => {
                         </div>
                     </div>
 
-                    <div id="ledger-logs" class="overflow-y-auto flex-grow space-y-2 pr-2 mb-3"></div>
+                    <div id="ledger-logs" class="overflow-y-auto flex-grow space-y-2 pr-2 mb-2"></div>
 
-                    <div class="flex justify-between items-center border-t border-slate-200 pt-3">
-                        <span id="txt-resultados-led" class="text-slate-500 text-xs font-semibold">COINCIDENCIAS: 0</span>
+                    <div class="flex justify-between items-center border-t border-slate-200 pt-2 mt-auto">
+                        <span id="txt-resultados-led" class="text-slate-500 text-xs font-semibold font-mono">MATCHES: 0</span>
                         <div class="flex items-center gap-1">
-                            <button id="btn-prev-led" class="w-8 h-8 rounded-md bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-blue-600 disabled:opacity-30 transition-all"><i class="fa-solid fa-chevron-left"></i></button>
-                            <span id="txt-paginacion-led" class="px-4 text-xs font-bold text-slate-700">1 / 1</span>
-                            <button id="btn-next-led" class="w-8 h-8 rounded-md bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-blue-600 disabled:opacity-30 transition-all"><i class="fa-solid fa-chevron-right"></i></button>
+                            <button id="btn-prev-led" class="w-7 h-7 rounded bg-white border border-slate-200 text-slate-600 hover:bg-blue-50 hover:text-blue-600 hover:border-blue-200 disabled:opacity-30 transition-all"><i class="fa-solid fa-chevron-left text-xs"></i></button>
+                            <span id="txt-paginacion-led" class="px-3 text-xs font-bold text-slate-700 font-mono">1 / 1</span>
+                            <button id="btn-next-led" class="w-7 h-7 rounded bg-white border border-slate-200 text-slate-600 hover:bg-blue-50 hover:text-blue-600 hover:border-blue-200 disabled:opacity-30 transition-all"><i class="fa-solid fa-chevron-right text-xs"></i></button>
                         </div>
                     </div>
                 </div>
@@ -608,19 +625,22 @@ app.get('/status', (req, res) => {
             let historialGlobal = [];
             let pagosGlobal = [];
             let vistaActual = 'telemetry';
+            let canalActual = 'ALL'; // Canal de radio seleccionado
             
             let pagTel = 1, pagLed = 1;
             const LIMIT_TEL = 50, LIMIT_LED = 20;
 
             const grid = document.getElementById('grid-obreros');
             const terminal = document.getElementById('terminal-logs');
+            const sidebarCanales = document.getElementById('sidebar-canales');
+            const badgeCanalActual = document.getElementById('badge-canal-actual');
             const ledger = document.getElementById('ledger-logs');
             const txtActualizacion = document.getElementById('txt-actualizacion');
             const badgeCola = document.getElementById('badge-cola');
             const txtCola = document.getElementById('txt-cola');
             const iconCola = document.getElementById('icon-cola');
 
-            // Listeners Pestañas
+            // Listeners Pestañas Principales
             function switchTab(tab) {
                 vistaActual = tab;
                 document.getElementById('view-telemetry').classList.toggle('hidden', tab !== 'telemetry');
@@ -630,13 +650,22 @@ app.get('/status', (req, res) => {
                 const btnLed = document.getElementById('btn-tab-ledger');
                 
                 if(tab === 'telemetry') {
-                    btnTel.className = "tab-btn tab-active pb-3 flex items-center gap-2 text-sm";
-                    btnLed.className = "tab-btn tab-inactive pb-3 flex items-center gap-2 text-sm";
+                    btnTel.className = "tab-btn tab-active pb-3 flex items-center gap-2 text-sm uppercase tracking-wide";
+                    btnLed.className = "tab-btn tab-inactive pb-3 flex items-center gap-2 text-sm uppercase tracking-wide";
                 } else {
-                    btnTel.className = "tab-btn tab-inactive pb-3 flex items-center gap-2 text-sm";
-                    btnLed.className = "tab-btn tab-active pb-3 flex items-center gap-2 text-sm";
+                    btnTel.className = "tab-btn tab-inactive pb-3 flex items-center gap-2 text-sm uppercase tracking-wide";
+                    btnLed.className = "tab-btn tab-active pb-3 flex items-center gap-2 text-sm uppercase tracking-wide";
                 }
                 renderizarVistas();
+            }
+
+            // Cambiar Canal de Radio (Sidebar)
+            function setCanal(idCanal) {
+                canalActual = idCanal;
+                pagTel = 1;
+                badgeCanalActual.innerText = idCanal === 'ALL' ? 'ALL_STREAMS' : idCanal;
+                renderizarSidebarCanales();
+                renderizarTelemetria();
             }
 
             // Listeners Telemetría
@@ -668,7 +697,13 @@ app.get('/status', (req, res) => {
                     renderizarObreros(data.obreros);
                     historialGlobal = data.historial;
                     pagosGlobal = data.pagos || [];
-                    renderizarVistas();
+                    
+                    if(vistaActual === 'telemetry') {
+                        renderizarSidebarCanales();
+                        renderizarTelemetria();
+                    } else {
+                        renderizarLedger();
+                    }
                     
                     // UI Cola - Tema claro
                     txtCola.innerText = 'COLA: ' + data.encolados.toString().padStart(2, '0');
@@ -684,12 +719,14 @@ app.get('/status', (req, res) => {
                     
                     const ahora = new Date();
                     txtActualizacion.innerText = \`SYNC: \${ahora.toLocaleTimeString('en-US', {hour12: false})}\`;
-                    txtActualizacion.classList.replace('text-red-500', 'text-slate-500');
                 } catch (error) {}
             }
 
             function renderizarVistas() {
-                if(vistaActual === 'telemetry') renderizarTelemetria();
+                if(vistaActual === 'telemetry') {
+                    renderizarSidebarCanales();
+                    renderizarTelemetria();
+                }
                 else renderizarLedger();
             }
 
@@ -701,79 +738,114 @@ app.get('/status', (req, res) => {
                     const isCocinando = o.cocinandoHasta > tiempoActual;
                     const segCoccion = isCocinando ? Math.ceil((o.cocinandoHasta - tiempoActual) / 1000) : 0;
                     
-                    const bordeEstado = isVivo ? 'border-slate-200 shadow-sm bg-white' : 'border-red-200 bg-red-50/50 shadow-sm';
-                    let statusIcon = isVivo ? \`<i class="fa-solid fa-circle-check text-emerald-500 text-xs"></i> <span class="text-emerald-700 font-medium">Operativo</span>\` : \`<i class="fa-solid fa-triangle-exclamation text-red-500 text-xs animate-pulse"></i> <span class="text-red-700 font-semibold">Cuarentena</span>\`;
+                    const bordeEstado = isVivo ? 'border-slate-200 bg-white' : 'border-red-200 bg-red-50/50';
+                    let statusIcon = isVivo ? \`<i class="fa-solid fa-circle-check text-emerald-500"></i>\` : \`<i class="fa-solid fa-triangle-exclamation text-red-500 animate-pulse"></i>\`;
                     
                     let opsBadges = '';
-                    if (isCocinando) opsBadges += \`<div class="border border-amber-200 bg-amber-50 text-amber-700 px-2 py-0.5 rounded text-[10px] font-semibold"><i class="fa-solid fa-fire animate-pulse mr-1"></i>\${segCoccion}s</div>\`;
-                    if (o.buscandoServicios) opsBadges += \`<div class="border border-sky-200 bg-sky-50 text-sky-700 px-2 py-0.5 rounded text-[10px] font-semibold"><i class="fa-solid fa-satellite-dish animate-pulse mr-1"></i>SRV</div>\`;
+                    if (isCocinando) opsBadges += \`<span class="text-amber-600 font-mono"><i class="fa-solid fa-fire animate-pulse mr-1"></i>\${segCoccion}s</span>\`;
+                    if (o.buscandoServicios) opsBadges += \`<span class="text-sky-600 font-mono"><i class="fa-solid fa-satellite-dish animate-pulse mr-1"></i>SRV</span>\`;
 
                     const porcentajeCarga = Math.min((o.carga / 10) * 100, 100);
                     let colorBarra = o.carga > 5 ? 'bg-red-500' : (o.carga > 2 ? 'bg-amber-400' : 'bg-blue-500');
 
-                    // Badge dinámico para identificar si es PRINCIPAL o TOCUYITO visualmente
                     let tagSucursal = (o.sucursal === 'TOCUYITO') 
-                        ? \`<span class="bg-amber-100 text-amber-800 border border-amber-200 px-1.5 py-0.5 rounded text-[9px] font-bold">TOCUYITO</span>\`
-                        : \`<span class="bg-slate-100 text-slate-600 border border-slate-200 px-1.5 py-0.5 rounded text-[9px] font-bold">PRINCIPAL</span>\`;
+                        ? \`<span class="bg-amber-100 text-amber-800 border border-amber-200 px-1.5 py-0.5 rounded text-[8px] font-bold">TOCU</span>\`
+                        : \`<span class="bg-slate-100 text-slate-600 border border-slate-200 px-1.5 py-0.5 rounded text-[8px] font-bold">PRIN</span>\`;
 
                     htmlTemp += \`
-                    <div class="p-4 border \${bordeEstado} rounded-xl transition-colors flex flex-col justify-between min-h-[160px]">
-                        <div class="flex justify-between items-start mb-3">
+                    <div class="p-3 border \${bordeEstado} rounded-lg shadow-sm transition-colors flex flex-col justify-between h-[110px]">
+                        <div class="flex justify-between items-start mb-1">
                             <div>
-                                <h2 class="text-lg font-bold text-slate-800 tracking-tight flex items-center gap-2">WK_0\${o.id} \${tagSucursal}</h2>
-                                <div class="text-[11px] mt-1 flex items-center gap-1">\${statusIcon}</div>
+                                <h2 class="text-sm font-bold text-slate-800 flex items-center gap-1.5">WK_0\${o.id} \${tagSucursal}</h2>
+                                <div class="text-[10px] mt-0.5 flex items-center gap-1.5 font-semibold text-slate-500">\${statusIcon} \${isVivo ? 'En línea' : 'Caído'}</div>
                             </div>
-                            <div class="text-right bg-slate-50 p-2 rounded border border-slate-100">
-                                <div class="text-xl font-bold leading-none \${o.fallos > 0 ? 'text-red-500' : 'text-slate-700'}">\${o.fallos.toString().padStart(2, '0')}</div>
-                                <div class="text-[9px] font-bold text-slate-400 mt-1 uppercase tracking-wider">Errores</div>
+                            <div class="text-right">
+                                <div class="text-sm font-mono font-bold \${o.fallos > 0 ? 'text-red-500' : 'text-slate-400'}">\${o.fallos} err</div>
                             </div>
                         </div>
                         
-                        <div class="flex gap-2 mb-3 h-5">\${opsBadges}</div>
-                        
-                        <div class="mb-4 bg-slate-50 p-2 rounded border border-slate-100">
-                            <div class="flex justify-between text-[10px] font-bold text-slate-500 mb-1.5 uppercase tracking-wide">
-                                <span>Carga Actual</span><span class="text-slate-700">\${o.carga} REQ</span>
-                            </div>
-                            <div class="w-full bg-slate-200 rounded-full h-1.5 overflow-hidden">
+                        <div class="flex justify-between items-end mt-auto">
+                            <div class="flex gap-2 text-[9px] h-3">\${opsBadges}</div>
+                            <div class="w-12 bg-slate-200 rounded-full h-1.5 overflow-hidden">
                                 <div class="\${colorBarra} h-full transition-all duration-500" style="width: \${porcentajeCarga}%"></div>
                             </div>
-                        </div>
-                        
-                        <div class="grid grid-cols-2 gap-2 mt-auto text-xs font-semibold">
-                            <button onclick="ejecutarOrden(\${o.id})" class="bg-white text-slate-600 border border-slate-200 hover:bg-red-50 hover:text-red-600 hover:border-red-200 rounded-lg py-1.5 transition-colors group shadow-sm flex items-center justify-center gap-1.5">
-                                <i class="fa-solid fa-rotate-right group-hover:animate-spin"></i> Reiniciar
-                            </button>
-                            <button onclick="revivir(\${o.id})" class="bg-white text-slate-600 border border-slate-200 hover:bg-emerald-50 hover:text-emerald-700 hover:border-emerald-200 rounded-lg py-1.5 transition-colors shadow-sm flex items-center justify-center gap-1.5">
-                                <i class="fa-solid fa-bolt"></i> Forzar ON
-                            </button>
                         </div>
                     </div>\`;
                 });
                 grid.innerHTML = htmlTemp;
             }
 
+            // 📡 MOTOR DEL RADAR LATERAL (NUEVO)
+            function renderizarSidebarCanales() {
+                // 1. Extraer identificadores únicos y contar logs por canal
+                const conteo = { 'ALL': historialGlobal.length, 'SYS': 0 };
+                
+                historialGlobal.forEach(log => {
+                    const id = log.obreroId || 'UNK';
+                    if (!conteo[id]) conteo[id] = 0;
+                    conteo[id]++;
+                });
+
+                // Ordenar los canales (SYS primero, luego WK, luego Cronos)
+                const canales = Object.keys(conteo).sort((a, b) => {
+                    if (a === 'ALL') return -1;
+                    if (b === 'ALL') return 1;
+                    if (a === 'SYS') return -1;
+                    if (b === 'SYS') return 1;
+                    return a.localeCompare(b);
+                });
+
+                let htmlTemp = '';
+                canales.forEach(id => {
+                    if(conteo[id] === 0 && id !== 'ALL' && id !== 'SYS') return; // Ocultar canales vacíos
+
+                    const activo = canalActual === id ? 'channel-active' : 'channel-inactive';
+                    
+                    // Iconos por tipo de fuente
+                    let icon = '<i class="fa-solid fa-satellite-dish w-4"></i>';
+                    if (id === 'SYS') icon = '<i class="fa-solid fa-microchip w-4"></i>';
+                    else if (id.startsWith('WK')) icon = '<i class="fa-solid fa-robot w-4"></i>';
+                    else if (id.startsWith('CRONOS')) icon = '<i class="fa-solid fa-ghost w-4"></i>';
+
+                    const nombre = id === 'ALL' ? 'Todos los Flujos' : (id === 'SYS' ? 'Sistema Central' : id);
+
+                    htmlTemp += \`
+                    <button onclick="setCanal('\${id}')" class="channel-btn \${activo} w-full text-left px-3 py-2 rounded text-xs flex justify-between items-center group">
+                        <div class="flex items-center gap-2 truncate pr-2">
+                            \${icon} <span class="truncate">\${nombre}</span>
+                        </div>
+                        <span class="bg-white border border-slate-200 text-slate-500 text-[9px] font-mono px-1.5 py-0.5 rounded shadow-sm group-hover:border-blue-300 transition-colors">\${conteo[id]}</span>
+                    </button>\`;
+                });
+
+                sidebarCanales.innerHTML = htmlTemp;
+            }
+
             function renderizarTelemetria() {
                 const busqueda = document.getElementById('input-busqueda-tel').value.toLowerCase().trim();
                 const tipoFiltrado = document.getElementById('filtro-tipo-tel').value;
 
+                // Doble filtro: Por Búsqueda/Tipo Y por Canal seleccionado
                 let logsFiltrados = historialGlobal.filter(log => {
+                    const coincideCanal = canalActual === 'ALL' || log.obreroId === canalActual;
                     const coincideTipo = tipoFiltrado === 'ALL' || log.tipo === tipoFiltrado;
-                    const textoCompleto = \`\${log.reqId} \${log.mensaje} \${log.obreroId}\`.toLowerCase();
-                    return coincideTipo && (busqueda === '' || textoCompleto.includes(busqueda));
+                    const textoCompleto = \`\${log.reqId} \${log.mensaje}\`.toLowerCase();
+                    const coincideBusqueda = busqueda === '' || textoCompleto.includes(busqueda);
+                    
+                    return coincideCanal && coincideTipo && coincideBusqueda;
                 });
 
                 const totalPaginas = Math.max(1, Math.ceil(logsFiltrados.length / LIMIT_TEL));
                 if (pagTel > totalPaginas) pagTel = totalPaginas;
 
                 document.getElementById('txt-paginacion-tel').innerText = \`\${pagTel.toString().padStart(2, '0')} / \${totalPaginas.toString().padStart(2, '0')}\`;
-                document.getElementById('txt-resultados-tel').innerText = \`COINCIDENCIAS: \${logsFiltrados.length.toString().padStart(4, '0')}\`;
+                document.getElementById('txt-resultados-tel').innerText = \`MATCHES: \${logsFiltrados.length.toString().padStart(4, '0')}\`;
                 document.getElementById('btn-prev-tel').disabled = pagTel === 1;
                 document.getElementById('btn-next-tel').disabled = pagTel === totalPaginas;
 
                 let htmlTemp = '';
                 if(logsFiltrados.length === 0) {
-                    terminal.innerHTML = '<div class="text-slate-400 italic mt-6 text-center font-medium text-sm">No se encontraron registros.</div>';
+                    terminal.innerHTML = '<div class="text-slate-400 italic mt-6 text-center font-medium text-xs">No hay transmisiones en esta frecuencia.</div>';
                     return;
                 }
 
@@ -783,21 +855,28 @@ app.get('/status', (req, res) => {
                     let bgFondo = '';
 
                     if (log.tipo === 'NUEVA') { iconClass = 'fa-solid fa-arrow-right-to-bracket text-blue-500'; }
-                    if (log.tipo === 'EXITO') { iconClass = 'fa-solid fa-check-circle text-emerald-500'; colorBase = 'text-slate-700 font-medium'; bgFondo = 'bg-emerald-50/30'; }
+                    if (log.tipo === 'EXITO') { iconClass = 'fa-solid fa-check-circle text-emerald-500'; colorBase = 'text-slate-700 font-medium'; bgFondo = 'bg-emerald-50/50'; }
                     if (log.tipo === 'ERROR') { iconClass = 'fa-solid fa-circle-xmark text-red-500'; colorBase = 'text-red-700 font-medium'; bgFondo = 'bg-red-50/50'; }
                     if (log.tipo === 'ALERTA') { iconClass = 'fa-solid fa-triangle-exclamation text-amber-500'; colorBase = 'text-amber-700 font-medium'; bgFondo = 'bg-amber-50/50'; }
                     if (log.tipo === 'COLA') { iconClass = 'fa-solid fa-layer-group text-indigo-500'; colorBase = 'text-indigo-700'; }
                     if (log.tipo === 'INFO') { iconClass = 'fa-solid fa-terminal text-slate-500'; }
 
-                    const duracionStr = log.duracion ? \`<span class="text-slate-400 ml-2 font-mono text-[10px]">[\${log.duracion}ms]</span>\` : '';
-                    const obreroTag = log.obreroId !== 'SYS' ? \`<span class="text-blue-600 ml-2 border border-blue-200 bg-blue-50 rounded px-1.5 font-bold text-[10px]">WK_\${log.obreroId.toString().padStart(2,'0')}</span>\` : '<span class="text-slate-500 ml-2 border border-slate-200 bg-white rounded px-1.5 font-bold text-[10px]">SYS</span>';
+                    const duracionStr = log.duracion ? \`<span class="text-slate-400 ml-2 text-[9px]">[\${log.duracion}ms]</span>\` : '';
+                    
+                    // Ya no forzamos "WK_" ni "SYS" en la UI de cada fila si el canal lateral ya lo dice, pero lo dejamos sutil para ALL_STREAMS
+                    let tagOrigen = '';
+                    if (canalActual === 'ALL') {
+                        const bgTag = log.obreroId === 'SYS' ? 'bg-slate-200 text-slate-600' : 'bg-blue-100 text-blue-700 border-blue-200 border';
+                        tagOrigen = \`<span class="ml-2 px-1.5 py-0.5 rounded text-[9px] font-bold \${bgTag}">\${log.obreroId}</span>\`;
+                    }
 
+                    // Corrección vital: JSON bien formateado en los logs con whitespace-pre-wrap
                     htmlTemp += \`
-                    <div class="flex items-start gap-3 p-2 hover:bg-white transition-colors border-l-2 border-transparent hover:border-blue-400 rounded \${bgFondo}">
-                        <div class="text-slate-400 w-24 shrink-0 mt-0.5 text-[11px] font-mono">\${formatearHora(log.tiempo)}</div>
-                        <div class="w-5 shrink-0 text-center mt-0.5"><i class="\${iconClass}"></i></div>
-                        <div class="text-slate-600 w-16 shrink-0 text-center mt-0.5 font-mono text-[10px] font-bold bg-white border border-slate-200 rounded py-0.5">\${log.reqId}</div>
-                        <div class="\${colorBase} break-all flex-grow leading-snug text-[13px] whitespace-pre-wrap font-mono">\${log.mensaje} \${obreroTag}\${duracionStr}</div>
+                    <div class="flex items-start gap-2 p-1.5 hover:bg-white transition-colors border-l-2 border-transparent hover:border-blue-400 rounded \${bgFondo}">
+                        <div class="text-slate-400 w-20 shrink-0 mt-0.5 text-[10px] font-mono">\${formatearHora(log.tiempo)}</div>
+                        <div class="w-4 shrink-0 text-center mt-0.5 text-[10px]"><i class="\${iconClass}"></i></div>
+                        <div class="text-slate-500 w-12 shrink-0 text-center mt-0.5 font-mono text-[9px] font-bold bg-white border border-slate-200 rounded py-0.5 shadow-sm">\${log.reqId}</div>
+                        <div class="\${colorBase} break-all flex-grow leading-snug text-[11px] whitespace-pre-wrap font-mono">\${log.mensaje} \${tagOrigen}\${duracionStr}</div>
                     </div>\`;
                 });
                 terminal.innerHTML = htmlTemp;
@@ -811,13 +890,9 @@ app.get('/status', (req, res) => {
                 let cVidanet = 0, cIcaro = 0, cRechazadosVid = 0, sumTime = 0;
                 
                 pagosGlobal.forEach(p => {
-                    if (p.sistema === 'VIDANET') {
-                        cVidanet++;
-                    } else if (p.sistema === 'ICAROSOFT') {
-                        cIcaro++;
-                    } else if (p.sistema && p.sistema.includes('VIDANET') && p.sistema.includes('RECHAZADO')) {
-                        cRechazadosVid++;
-                    }
+                    if (p.sistema === 'VIDANET') cVidanet++;
+                    else if (p.sistema === 'ICAROSOFT') cIcaro++;
+                    else if (p.sistema && p.sistema.includes('VIDANET') && p.sistema.includes('RECHAZADO')) cRechazadosVid++;
                     if(p.duracion) sumTime += p.duracion;
                 });
                 
@@ -844,7 +919,7 @@ app.get('/status', (req, res) => {
 
                 let htmlTemp = '';
                 if(filtrados.length === 0) {
-                    ledger.innerHTML = '<div class="text-slate-400 italic mt-8 text-center font-medium text-sm">No hay registros de pago en memoria.</div>';
+                    ledger.innerHTML = '<div class="text-slate-400 italic mt-8 text-center font-medium text-xs">No hay registros de pago en memoria.</div>';
                     return;
                 }
 
@@ -864,37 +939,28 @@ app.get('/status', (req, res) => {
 
                     const segs = p.duracion ? (p.duracion / 1000).toFixed(1) + 's' : 'N/A';
                     
-                    // 🎨 EL PINTOR TÁCTICO CORPORATIVO: Insignias de sucursal
                     const badgeSucursal = (p.sucursal === 'TOCUYITO') 
-                        ? '<span class="bg-amber-100 text-amber-800 border border-amber-200 px-2 py-0.5 ml-2 rounded text-[10px] font-bold align-middle">TOCUYITO</span>' 
-                        : '<span class="bg-emerald-100 text-emerald-800 border border-emerald-200 px-2 py-0.5 ml-2 rounded text-[10px] font-bold align-middle">PRINCIPAL</span>';
+                        ? '<span class="bg-amber-100 text-amber-800 border border-amber-200 px-1.5 py-0.5 ml-2 rounded text-[9px] font-bold align-middle">TOCUYITO</span>' 
+                        : '<span class="bg-slate-100 text-slate-600 border border-slate-200 px-1.5 py-0.5 ml-2 rounded text-[9px] font-bold align-middle">PRINCIPAL</span>';
 
                     htmlTemp += \`
-                    <div class="flex items-center justify-between border border-slate-200 bg-white rounded-lg p-3 hover:shadow-md hover:border-blue-300 transition-all mb-2">
-                        <div class="flex items-center gap-4">
-                            <div class="w-10 h-10 rounded-full \${bgIcon} flex items-center justify-center text-lg">
+                    <div class="flex items-center justify-between border border-slate-200 bg-white rounded-lg p-2.5 hover:shadow-sm hover:border-blue-300 transition-all mb-1.5">
+                        <div class="flex items-center gap-3">
+                            <div class="w-8 h-8 rounded-full \${bgIcon} flex items-center justify-center text-sm shrink-0">
                                 \${iconStatus}
                             </div>
-                            <div>
-                                <div class="text-slate-800 font-bold text-sm flex items-center">\${p.cliente} \${badgeSucursal}</div>
-                                <div class="text-xs font-mono text-slate-500 mt-1">\${formatearHora(p.tiempo, true)} <span class="text-slate-300 mx-1">|</span> REQ: <span class="font-bold text-slate-600">\${p.reqId}</span></div>
+                            <div class="min-w-0">
+                                <div class="text-slate-800 font-bold text-xs flex items-center truncate">\${p.cliente} \${badgeSucursal}</div>
+                                <div class="text-[10px] font-mono text-slate-500 mt-0.5 truncate">\${formatearHora(p.tiempo, true)} <span class="text-slate-300 mx-1">|</span> REQ: <span class="font-bold text-slate-600">\${p.reqId}</span></div>
                             </div>
                         </div>
-                        <div class="text-right">
-                            <div class="\${colorSis} border px-2 py-1 rounded text-[10px] font-bold inline-block">\${p.sistema}</div>
-                            <div class="text-[10px] font-mono text-slate-400 mt-1.5 font-medium">TIEMPO: <span class="text-slate-600 font-bold">\${segs}</span></div>
+                        <div class="text-right shrink-0 ml-2">
+                            <div class="\${colorSis} border px-1.5 py-0.5 rounded text-[9px] font-bold inline-block">\${p.sistema}</div>
+                            <div class="text-[9px] font-mono text-slate-400 mt-1 font-medium">TIME: <span class="text-slate-600 font-bold">\${segs}</span></div>
                         </div>
                     </div>\`;
                 });
                 ledger.innerHTML = htmlTemp;
-            }
-
-            async function ejecutarOrden(id) {
-                if(!confirm(\`ATENCIÓN: ¿Forzar reinicio del WORKER_\${id}? (Esto destruirá el contenedor actual)\`)) return;
-                try { await fetch(\`/api/tactico/estado\`); await fetch(\`/api/tactico/orden66/\${id}\`, { method: 'POST' }); } catch(e) {}
-            }
-            async function revivir(id) {
-                try { await fetch(\`/api/tactico/revivir/\${id}\`, { method: 'POST' }); } catch(e) {}
             }
 
             escanearEscuadron();
